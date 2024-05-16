@@ -1,0 +1,68 @@
+---
+title: "Summary"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(sf)
+library(ggrepel)
+library(scales)
+library(shiny)
+library(shinycssloaders)
+library(ggiraph)
+library(kableExtra)
+library(rmapshaper)
+library(cowplot)
+library(DT)
+library(htmlwidgets)
+library(RColorBrewer)
+library(readxl)
+library(janitor)
+library(lubridate)
+library(systemfonts)
+reset_font_cache()
+library(ggtext)
+```
+
+# Research question
+
+There are five primary drivers in the increase in assisted living and residential care market;
+
+1. Federal and state efforts to move individuals from institutional to noninstitutional or community-based settings.
+2. Advances in medical care and technology have altered both demand and need for institutional care.
+3. There is a consumer preference shift for more independent living.
+4. Assisted living is perceived more positively compared to nursing homes.
+5. Assisted living communities are less costly.
+
+<br>
+
+# Exploration of data
+
+Due to these facts, it would seem necessary to highlight the trends in these types of institutions - non-institutional and institutional care;
+
+* Where are they located?
+* What is their capacity?
+
+
+The following is a list of characteristics/attributes that we would like to explore in the data;
+
+Profile of institutional and non-institutional settings for each region of Minnesota
+
+* Nursing homes
+  + Private vs. non-profit 
+  + Bed availability
+  + Reasons for declines in availability - financial vs. workforce shortages
+  + Staffing
+  + Projected demand
+
+* Assisted living facilities
+  + Private vs. non-profit
+  + Trends in capacity
+  + Services offered
+  + Staffing
+
+
+

@@ -63,6 +63,26 @@ Profile of institutional and non-institutional settings for each region of Minne
   + Trends in capacity
   + Services offered
   + Staffing
+  
+  
+# Terminology
+
+*Board and care homes*
+These small private facilities, also called residential care facilities or group homes, usually have 20 or fewer residents. Rooms may be private or shared. Residents receive personal care and meals, and staff are available around the clock. Nursing and medical care usually are not provided at the home.
+
+In most cases, you must pay the costs of living at a board and care home. Medicare does not cover these costs. Medicaid may provide partial coverage, depending on the state and whether the person is eligible. If the older person has long-term care insurance, check their plan to see if it includes coverage for this type of facility.
+
+*Nursing homes*
+Nursing homes, also called skilled nursing facilities, provide a wide range of health and personal care services. Their services focus more on medical care than most assisted living facilities or board and care homes. Services offered in a nursing home typically include nursing care, 24-hour supervision, three meals a day, and assistance with everyday activities. Rehabilitation services, such as physical, occupational, and speech therapy, are also available.
+
+In many cases, people must pay for nursing home care themselves. Medicare generally doesn’t cover long-term stays in a nursing home, but it may pay for some related costs, such as doctor services and medical supplies. Medicaid may also cover some of the costs of nursing homes for people who are eligible based on income and personal resources. If the older person has long-term care insurance, the policy may include some coverage for nursing home care. Check with the insurance company for details.
+
+*Assisted living*
+Assisted living is for people who need help with daily care, but not as much help as a nursing home provides. Assisted living facilities range in size from as few as 25 residents to 100 or more. Typically, a few levels of care are offered, and residents pay more if they need extra services or special care.
+
+Assisted living residents usually live in their own apartments or rooms and share common areas. They have access to many services, including up to three meals a day; assistance with personal care; help with medications, housekeeping, and laundry; 24-hour supervision, security, and on-site staff; and social and recreational activities. Some assisted living facilities are part of a larger organization that also offers other levels of care. For example, continuing care retirement communities may also offer independent living and skilled nursing care. Exact arrangements vary by facility and by state.
+
+Most people pay the full costs of assisted living themselves. This option tends to be more expensive than living independently but less expensive than a nursing home. Medicare does not pay for assisted living. Medicaid may provide coverage for some aspects of assisted living, depending on the state and whether the person is eligible. This care option is partially covered by some long-term care insurance policies.
 
 
 

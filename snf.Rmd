@@ -132,11 +132,19 @@ mn_counties <- st_read("/Users/kellyasche/Library/CloudStorage/GoogleDrive-kasch
 First, let's load in the master file.
 
 ```{r load master file}
-master.original <- read_csv("Data/Facilities/Master-provider-directory-2005-2024.csv")
+master.original <- read_csv("Data/Facilities/Master-provider-directory-2005-2024.csv") %>%
+  mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
+         planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
+         edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"))
 
 master.original %>%
   names() %>%
   kable()
+
+master.age.75plus.county <- read_csv("Data/Population/Age/Master-age-75plus-county.csv") %>%
+  mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
+         planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
+         edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"))
 
 ```
 
@@ -156,7 +164,375 @@ datatable(field.outline, class = "cell-border stripe", filter = "top", rownames 
 
 <br>
 
-With this exploration, the primary data we want are only the skilled nursing facilities. In the dataset, that would mean we want all the rows that have 
+With this exploration, the primary data we want are only the skilled nursing facilities and their capacity to provide nursing home beds. This dataset is a bit confusing to try and figure out which column is actually measuring beds. Here are all the columns that seem to have something to do with capacity;
+
+* NH_BEDS: this will give us the total number of nursing home beds, which is also split into two categories
+* SNF_BEDS: this is the federal medicare eligible beds
+* SNFNF_BEDS: this is the federal medicare and medicaid eligible beds.
+* NF1_Beds: Federal Medicaid, number of nursing facility beds (Nursing home)
+* NF2_Beds: Federal Medicaid, number of nursing facility beds (Bording care home)
+
+I think we need better descriptions here to decipher what is going on because some of these a sub-categories of others. For example, NH_BEDS seems to be the sum of SNF_BEDS and SNFNF_Beds.
+
+```{r testing, echo=FALSE}
+nursing.beds <- c("year", "NH_BEDS", "SNF_BEDS", "SNFNF_BEDS", "NF1_BEDS", "NF2_BEDS")
+test <- master.original %>%
+  select(HFID, NAME, nursing.beds)
+```
+
+* NH_BEDS = SNF_BEDS + SNFNF_BEDS + NF1_BEDS
+
+So what is the difference between those three that add up to NH_BEDS? 
+* SNF_BEDS =  are only medicare eligible beds.
+* SNFNF_BEDS =  are medicare and medicaid eligible beds.
+* NF1_BEDS = 
 
 
+* NF2_BEDS is not included in the NH_BEDS. Why? These beds are not in a skilled nursing facility, but rather in a "group home" which is a small, private facility. 
+
+So with this figured out, let's create a dataset that has all five of these columns because it will be good to be able to split out these further in the analysis.
+
+```{r create master snf beds}
+master.snf <- master.original %>%
+  select(year, LIC_TYPE, NH_BEDS, SNF_BEDS, SNFNF_BEDS, NF1_BEDS, NF2_BEDS, HFID, NAME, CITY, STATE, ZIP, COUNTY_NAME, countyfp, Dem_Desc, edr, planning.region)
+
+master.snf
+```
+
+<br>
+
+# Change in skilled nursing beds{.tabset}
+
+This section will explore what changes have taken place in the number of licensed skilled nursing beds by region and rurality. For this exploration we will use the sum of NH_BEDS + NF2_BEDS.
+
+```{r sn beds master}
+nh.nf2.beds.master <- master.snf %>%
+  mutate(nh.nf2.beds = NH_BEDS + NF2_BEDS) %>%
+  filter(nh.nf2.beds > 0)
+
+names(nh.nf2.beds.master)
+
+```
+
+There are `r comma(nrow(nh.nf2.beds.master))` facilities with these types of beds available in Minnesota.
+
+
+<br>
+
+## Minnesota
+
+The number of nursing home beds has decreased 33% since 2005 in the state of Minnesota. Overall in Minnesota, the number of skilled nursing home and facility beds available has declined by 33.3%, from 37,718 beds in 2005 to 25,173 in 2024.
+
+The largest percentage declines have occurred in Northwest (43.4%) and Southwest Minnesota (-38.3%). In particular, the EDRs 5 (-55%) and 4 (-40%) in Northwest Minnesota, and EDRs 8 (-40%) and 9 (-38%) in Southwest Minnesota. 
+
+Some of the counties with very high percentage declines include;
+
+* Cass (-93%)
+* Grant (-75%)
+* Swift (-69%)
+* Pine (-65%)
+* Faribault (-63%)
+
+<br>
+
+```{r nh and nf2 beds mn, echo = FALSE}
+nh.nf2.beds.mn <- nh.nf2.beds.master %>%
+  group_by(year) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
+  ungroup() %>%
+  arrange(year) %>%
+  mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)],
+         data_id = as.character(seq(n()))) 
+
+nh.nf2.beds.mn.plot <- ggplot(nh.nf2.beds.mn, aes(year, nh.nf2.beds)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste("Nursing home beds and Boarding Care Nursing Beds", "\n", year, "\nNumber of beds: ", comma(nh.nf2.beds), "\nChange since ", min(nh.nf2.beds.mn$year), ": ", percent(nh.nf2.beds.pct.change, accuracy = .1), sep = ""))) +
+  geom_label(aes(y = nh.nf2.beds / 2, label = paste("% change\nsince 2005\n", percent(nh.nf2.beds.pct.change, accuracy = .1), sep = "")), color = "black") +
+  geom_label(aes(label = comma(nh.nf2.beds)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of nursing home beds (nursing and boarding homes)")+
+  scale_y_continuous(labels=scales::comma)+
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = nh.nf2.beds.mn.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+
+<br>
+
+## Planning Region
+
+The planning regions with the largest percentage declines in the number of beds are Northwest (-43%) and Southwest (-38%). The lowest was actually in Central Minnesota with a decline of -25.2%. 
+
+<br>
+
+```{r nh and nf2 beds pr, echo = FALSE}
+nh.nf2.beds.pr <- nh.nf2.beds.master %>%
+  filter(!is.na(planning.region)) %>%
+  group_by(year, planning.region) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
+  ungroup() %>%
+  group_by(planning.region) %>%
+  arrange(year) %>%
+  mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+nh.nf2.beds.pr.plot <- ggplot(data = filter(nh.nf2.beds.pr, year != 2005), aes(as.character(year), nh.nf2.beds.pct.change)) +
+  facet_wrap(~planning.region, ncol = 2) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\n", "Nursing home beds and Boarding Care Nursing Beds", "\n", year, "\nNumber of beds: ", comma(nh.nf2.beds), "\nChange since ", min(nh.nf2.beds.mn$year), ": ", percent(nh.nf2.beds.pct.change, accuracy = .1), sep = ""))) +
+  geom_label(aes(y = nh.nf2.beds.pct.change / 2, label = percent(nh.nf2.beds.pct.change, accuracy = .1)), color = "black") +
+  labs(x="", y = "", color="", title = "Percent change in the number of nursing home beds (nursing and\nboarding homes) since 2005")+
+  scale_y_continuous(labels=scales::percent)+
+  scale_fill_manual(values = color.pr) +
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = nh.nf2.beds.pr.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+
+
+<br>
+
+## EDR
+
+These EDRs all have declines in the number of beds that exceed the state decline;
+
+* EDR 5 - North Central: -55%
+* EDR 4 - West Central: -40%
+* EDR 7E - East Central: -37%
+* EDR 8 - Southwest: -40%
+* EDR 9 - South Central: -38%
+
+These EDRs reside in either Norhwest or Southwest Minnesota.
+
+<br>
+
+```{r nh and nf2 beds edr, echo = FALSE}
+nh.nf2.beds.edr <- nh.nf2.beds.master %>%
+  filter(!is.na(edr)) %>%
+  group_by(year, edr, planning.region) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
+  ungroup() %>%
+  group_by(edr, planning.region) %>%
+  arrange(year) %>%
+  mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+nh.nf2.beds.edr.plot <- ggplot(data = filter(nh.nf2.beds.edr, year != 2005), aes(as.character(year), nh.nf2.beds.pct.change, fill = edr, group = edr)) +
+  facet_wrap(~planning.region, ncol = 2) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(edr, "\n", "Nursing home beds and Boarding Care Nursing Beds", "\n", year, "\nNumber of beds: ", comma(nh.nf2.beds), "\nChange since ", min(nh.nf2.beds.mn$year), ": ", percent(nh.nf2.beds.pct.change, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(nh.nf2.beds.pct.change, accuracy = .1)), color = "black", position = position_dodge(width = .9), show.legend = FALSE) +
+  labs(x="", y = "", color="", title = "Percent change in the number of nursing home beds (nursing and\nboarding homes) since 2005")+
+  scale_y_continuous(labels=scales::percent)+
+  scale_fill_manual(values = color.edr,
+                    guide = guide_legend(ncol = 3)) +
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = nh.nf2.beds.edr.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+
+
+<br>
+
+## County
+
+This clearly shows that the more rural a group of counties is, the larger the decline in the number of licensed beds.
+
+<br>
+
+```{r nh and nf2 beds county, echo = FALSE}
+nh.nf2.beds.county <- nh.nf2.beds.master %>%
+  filter(!is.na(countyfp)) %>%
+  group_by(year, countyfp, COUNTY_NAME) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
+  ungroup() %>%
+  group_by(countyfp, COUNTY_NAME) %>%
+  arrange(year) %>%
+  mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%
+  ungroup() %>%
+  filter(year == max(year)) %>% 
+  left_join(mn_counties[,c(5,7)], by = "countyfp") %>%
+  mutate(data_id = seq(n()))
+
+nh.nf2.beds.county.map <- ggplot(nh.nf2.beds.county) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = nh.nf2.beds.pct.change, data_id = countyfp, tooltip = paste(COUNTY_NAME, "\nNumber of beds: ", comma(nh.nf2.beds), "\nPercent change in the number of beds since 2005: ", percent(nh.nf2.beds.pct.change, accuracy = .1) , sep = ""))) +
+  theme_sf+
+  scale_fill_fermenter(palette = "Reds", direction = -1, labels = scales::percent) +
+  labs(title = "Percent change in number of beds since 2005") +
+  theme(legend.box.margin = margin(50, 0, 0, -100),
+        text = element_text(size = 18))
+
+girafe(ggobj = nh.nf2.beds.county.map, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))  
+
+
+
+```
+
+
+<br>
+
+## RUCA
+
+This clearly shows that the more rural a group of counties is, the larger the decline in the number of licensed beds.
+
+<br>
+
+```{r nh and nf2 beds ruca, echo = FALSE}
+nh.nf2.beds.ruca <- nh.nf2.beds.master %>%
+  filter(!is.na(Dem_Desc)) %>%
+  group_by(year, Dem_Desc) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
+  ungroup() %>%
+  group_by(Dem_Desc) %>%
+  arrange(year) %>%
+  mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+nh.nf2.beds.ruca.plot <- ggplot(data = filter(nh.nf2.beds.ruca, year != 2005), aes(as.character(year), nh.nf2.beds.pct.change)) +
+  facet_wrap(~Dem_Desc, ncol = 2) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(Dem_Desc, "\n", "Nursing home beds and Boarding Care Nursing Beds", "\n", year, "\nNumber of beds: ", comma(nh.nf2.beds), "\nChange since ", min(nh.nf2.beds.mn$year), ": ", percent(nh.nf2.beds.pct.change, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(nh.nf2.beds.pct.change, accuracy = .1)), color = "black", position = position_dodge(width = .9), show.legend = FALSE) +
+  labs(x="", y = "", color="", title = "Percent change in the number of nursing home beds (nursing and\nboarding homes) since 2005")+
+  scale_y_continuous(labels=scales::percent)+
+  scale_fill_manual(values = color.ruca,
+                    guide = guide_legend(ncol = 3)) +
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = nh.nf2.beds.ruca.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+
+
+<br>
+
+# Availability per 75+ resident{.tabset}
+
+The average age of nursing home residents is about 83, so let's use the 75+ age cohort to measure the ratio of residents per bed capacity.
+
+<br>
+
+```{r combine snf beds and age 75 plus, echo=FALSE}
+nh.nf2.beds.age.75plus.county <- nh.nf2.beds.master %>%
+  filter(!is.na(countyfp)) %>%
+  group_by(year, countyfp, COUNTY_NAME) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
+  ungroup() %>%
+  group_by(countyfp, COUNTY_NAME) %>%
+  arrange(year) %>%
+  mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%
+  ungroup() %>%
+  filter(year > 2005) %>%
+  left_join(master.age.75plus.county, by = c("countyfp", "year")) 
+```
+
+<br>
+
+## Minnesota
+
+<br>
+
+```{r 75 plus per nh nf2 bed MN}
+nh.nf2.beds.age.75plus.mn <- nh.nf2.beds.age.75plus.county %>%
+  group_by(year) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds),
+            age.75plus = sum(age.75plus)) %>%
+  mutate(age.75plus.nh.nf2.beds = age.75plus / nh.nf2.beds) %>%
+  ungroup() 
+
+nh.nf2.beds.age.75plus.mn.plot <- ggplot(nh.nf2.beds.age.75plus.mn, aes(as.character(year), age.75plus.nh.nf2.beds)) +
+  geom_col_interactive(position = "dodge", aes(data_id = year, tooltip = paste("Minnesota", "\nYear: ", year, "\nNumber of NH and NF2 beds = ", comma(nh.nf2.beds), "\nPopulation age 75 plus: ", comma(age.75plus), "\nNumber of 75 plus per available bed: ", comma(age.75plus.nh.nf2.beds), sep = ""))) +
+  geom_label(aes(label = comma(age.75plus.nh.nf2.beds)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of 75 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 75+ per nursing home bed capacity has increased by 81%")+
+  scale_y_continuous(labels=scales::comma)+
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = nh.nf2.beds.age.75plus.mn.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+<br>
+
+## Planning Region
+
+<br>
+
+```{r 75 plus per nh nf2 bed pr}
+nh.nf2.beds.age.75plus.pr <- nh.nf2.beds.age.75plus.county %>%
+  group_by(planning.region, year) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds),
+            age.75plus = sum(age.75plus)) %>%
+  mutate(age.75plus.nh.nf2.beds = age.75plus / nh.nf2.beds) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+nh.nf2.beds.age.75plus.pr.plot <- ggplot(nh.nf2.beds.age.75plus.pr, aes(as.character(year), age.75plus.nh.nf2.beds)) +
+  facet_wrap(~planning.region, ncol = 2) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nNumber of NH and NF2 beds = ", comma(nh.nf2.beds), "\nPopulation age 75 plus: ", comma(age.75plus), "\nNumber of 75 plus per available bed: ", comma(age.75plus.nh.nf2.beds), sep = ""))) +
+  geom_label(aes(label = comma(age.75plus.nh.nf2.beds, accuracy = 1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of 75 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 75+ per nursing home bed capacity has increased by 81%")+
+  scale_y_continuous(labels=scales::comma)+
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = nh.nf2.beds.age.75plus.pr.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+
+<br>
+
+## EDR
+
+<br>
+
+<br>
+
+## County
+
+<br>
+
+<br>
+
+## RUCA
+
+<br>
+
+<br>
 

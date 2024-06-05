@@ -112,13 +112,13 @@ counties.regions <- read_csv("/Users/kellyasche/Library/CloudStorage/GoogleDrive
          mif = fct_relevel(mif, "NW", "NE", "WC", "EC", "SW", "SE", "TC"))
 
 
-color.ruca <- c("Entirely rural" = "#009933", "Town/rural mix" = "#99CC33", "Urban/town/rural mix" = "#CC9966", "Entirely urban" = "#754C29", "Minnesota" = "black")
+color.ruca <- c("Entirely rural" = "#009933", "Town/rural mix" = "#99CC33", "Urban/town/rural mix" = "#CC9966", "Entirely urban" = "#654C29", "Minnesota" = "black")
 
-color.pr <- c("Northwest" = 	"#4575b4", "Northeast" = "grey", "Central" = "#fee090", "Seven County Mpls-St Paul" = "#d73027", "Southwest" = "#91bfdb", "Southeast" = "#fc8d59", "Minnesota" = "black")
+color.pr <- c("Northwest" = 	"#4565b4", "Northeast" = "grey", "Central" = "#fee090", "Seven County Mpls-St Paul" = "#d73027", "Southwest" = "#91bfdb", "Southeast" = "#fc8d59", "Minnesota" = "black")
 
 color.edr <- c("EDR 1 - Northwest" = "#b3cde3", "EDR 2 - Headwaters" = "#8c96c6", "EDR 3 - Arrowhead" = "#fe9929", "EDR 4 - West Central" = "#8856a7", "EDR 5 - North Central" = "#810f7c", "EDR 6E- Southwest Central" = "#e5f5f9", "EDR 6W- Upper Minnesota Valley" = "#bdc9e1", "EDR 7E- East Central" = "#99d8c9", "EDR 7W- Central" = "#2ca25f", "EDR 8 - Southwest" = "#74a9cf", "EDR 9 - South Central" = "#0570b0", "EDR 10 - Southeast" = "#d7301f", "EDR 11 - 7 County Twin Cities" = "#d8b365", "Minnesota" = "black")
 
-color.pr.edr <- c ("Northwest" = "#4575b4","Northeast" = "#e0f3f8", "Central" = "#fee090", "Seven County Mpls-St Paul" = "#d73027", "Southwest" = "#91bfdb", "Southeast" = "#fc8d59", "Minnesota" = "black", "EDR 1 - Northwest" = "#b3cde3", "EDR 2 - Headwaters" = "#8c96c6", "EDR 3 - Arrowhead" = "#fe9929", "EDR 4 - West Central" = "#8856a7", "EDR 5 - North Central" = "#810f7c", "EDR 6E- Southwest Central" = "#e5f5f9", "EDR 6W- Upper Minnesota Valley" = "#bdc9e1", "EDR 7E- East Central" = "#99d8c9", "EDR 7W- Central" = "#2ca25f", "EDR 8 - Southwest" = "#74a9cf", "EDR 9 - South Central" = "#0570b0", "EDR 10 - Southeast" = "#d7301f", "EDR 11 - 7 County Twin Cities" = "#d8b365")
+color.pr.edr <- c ("Northwest" = "#4565b4","Northeast" = "#e0f3f8", "Central" = "#fee090", "Seven County Mpls-St Paul" = "#d73027", "Southwest" = "#91bfdb", "Southeast" = "#fc8d59", "Minnesota" = "black", "EDR 1 - Northwest" = "#b3cde3", "EDR 2 - Headwaters" = "#8c96c6", "EDR 3 - Arrowhead" = "#fe9929", "EDR 4 - West Central" = "#8856a7", "EDR 5 - North Central" = "#810f7c", "EDR 6E- Southwest Central" = "#e5f5f9", "EDR 6W- Upper Minnesota Valley" = "#bdc9e1", "EDR 7E- East Central" = "#99d8c9", "EDR 7W- Central" = "#2ca25f", "EDR 8 - Southwest" = "#74a9cf", "EDR 9 - South Central" = "#0570b0", "EDR 10 - Southeast" = "#d7301f", "EDR 11 - 7 County Twin Cities" = "#d8b365")
 
 mn_counties <- st_read("/Users/kellyasche/Library/CloudStorage/GoogleDrive-kasche@ruralmn.org/My Drive/Data Prep/R Projects/Shapefiles/County shapefiles/MNCounties_MNDOT.shp", quiet = TRUE) %>%
   ms_simplify(keep = .01, keep_shapes = TRUE) %>%
@@ -141,7 +141,7 @@ master.original %>%
   names() %>%
   kable()
 
-master.age.75plus.county <- read_csv("Data/Population/Age/Master-age-75plus-county.csv") %>%
+master.age.65plus.county <- read_csv("Data/Population/Age/Master-age-65plus-county.csv") %>%
   mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
          planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
          edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"))
@@ -228,7 +228,7 @@ The largest percentage declines have occurred in Northwest (43.4%) and Southwest
 Some of the counties with very high percentage declines include;
 
 * Cass (-93%)
-* Grant (-75%)
+* Grant (-65%)
 * Swift (-69%)
 * Pine (-65%)
 * Faribault (-63%)
@@ -433,14 +433,14 @@ girafe(ggobj = nh.nf2.beds.ruca.plot, width_svg = 10, height_svg = 10) %>%
 
 <br>
 
-# Availability per 75+ resident{.tabset}
+# Availability per 65+ resident{.tabset}
 
-The average age of nursing home residents is about 83, so let's use the 75+ age cohort to measure the ratio of residents per bed capacity.
+The average age of nursing home residents is about 83, however, rural folks tend to get sicker earlier so let's use the 65+ age cohort to measure the ratio of residents per bed capacity.
 
 <br>
 
-```{r combine snf beds and age 75 plus, echo=FALSE}
-nh.nf2.beds.age.75plus.county <- nh.nf2.beds.master %>%
+```{r combine snf beds and age 65 plus, echo=FALSE}
+nh.nf2.beds.age.65plus.county <- nh.nf2.beds.master %>%
   filter(!is.na(countyfp)) %>%
   group_by(year, countyfp, COUNTY_NAME) %>%
   summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
@@ -450,7 +450,7 @@ nh.nf2.beds.age.75plus.county <- nh.nf2.beds.master %>%
   mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%
   ungroup() %>%
   filter(year > 2005) %>%
-  left_join(master.age.75plus.county, by = c("countyfp", "year")) 
+  left_join(master.age.65plus.county, by = c("countyfp", "year")) 
 ```
 
 <br>
@@ -459,25 +459,25 @@ nh.nf2.beds.age.75plus.county <- nh.nf2.beds.master %>%
 
 <br>
 
-```{r 75 plus per nh nf2 bed MN}
-nh.nf2.beds.age.75plus.mn <- nh.nf2.beds.age.75plus.county %>%
+```{r 65 plus per nh nf2 bed MN}
+nh.nf2.beds.age.65plus.mn <- nh.nf2.beds.age.65plus.county %>%
   group_by(year) %>%
   summarize(nh.nf2.beds = sum(nh.nf2.beds),
-            age.75plus = sum(age.75plus)) %>%
-  mutate(age.75plus.nh.nf2.beds = age.75plus / nh.nf2.beds) %>%
+            age.65plus = sum(age.65plus)) %>%
+  mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds) %>%
   ungroup() 
 
-nh.nf2.beds.age.75plus.mn.plot <- ggplot(nh.nf2.beds.age.75plus.mn, aes(as.character(year), age.75plus.nh.nf2.beds)) +
-  geom_col_interactive(position = "dodge", aes(data_id = year, tooltip = paste("Minnesota", "\nYear: ", year, "\nNumber of NH and NF2 beds = ", comma(nh.nf2.beds), "\nPopulation age 75 plus: ", comma(age.75plus), "\nNumber of 75 plus per available bed: ", comma(age.75plus.nh.nf2.beds), sep = ""))) +
-  geom_label(aes(label = comma(age.75plus.nh.nf2.beds)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
-  labs(x="", y = "", color="", title = "Number of 75 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 75+ per nursing home bed capacity has increased by 81%")+
+nh.nf2.beds.age.65plus.mn.plot <- ggplot(nh.nf2.beds.age.65plus.mn, aes(as.character(year), age.65plus.nh.nf2.beds)) +
+  geom_col_interactive(position = "dodge", aes(data_id = year, tooltip = paste("Minnesota", "\nYear: ", year, "\nNumber of NH and NF2 beds = ", comma(nh.nf2.beds), "\nPopulation age 65 plus: ", comma(age.65plus), "\nNumber of 65 plus per available bed: ", comma(age.65plus.nh.nf2.beds), sep = ""))) +
+  geom_label(aes(label = comma(age.65plus.nh.nf2.beds)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of 65 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 65+ per nursing home bed capacity has increased by 81%")+
   scale_y_continuous(labels=scales::comma)+
   theme_bar+
   theme(legend.position = "bottom",
         text = element_text(size = 18))
 
 
-girafe(ggobj = nh.nf2.beds.age.75plus.mn.plot, width_svg = 10, height_svg = 10) %>%
+girafe(ggobj = nh.nf2.beds.age.65plus.mn.plot, width_svg = 10, height_svg = 10) %>%
   girafe_options(opts_selection(type = "none"),
                  opts_sizing(rescale = FALSE))      
 
@@ -487,29 +487,31 @@ girafe(ggobj = nh.nf2.beds.age.75plus.mn.plot, width_svg = 10, height_svg = 10) 
 
 ## Planning Region
 
+The largest changes in the number of 65+ individuals per nh and NF2 bed capacity has been in the seven-county metro. Southwest has had the lowest.
+
 <br>
 
-```{r 75 plus per nh nf2 bed pr}
-nh.nf2.beds.age.75plus.pr <- nh.nf2.beds.age.75plus.county %>%
+```{r 65 plus per nh nf2 bed pr}
+nh.nf2.beds.age.65plus.pr <- nh.nf2.beds.age.65plus.county %>%
   group_by(planning.region, year) %>%
   summarize(nh.nf2.beds = sum(nh.nf2.beds),
-            age.75plus = sum(age.75plus)) %>%
-  mutate(age.75plus.nh.nf2.beds = age.75plus / nh.nf2.beds) %>%
+            age.65plus = sum(age.65plus)) %>%
+  mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds) %>%
   ungroup() %>%
   mutate(data_id = seq(n()))
 
-nh.nf2.beds.age.75plus.pr.plot <- ggplot(nh.nf2.beds.age.75plus.pr, aes(as.character(year), age.75plus.nh.nf2.beds)) +
+nh.nf2.beds.age.65plus.pr.plot <- ggplot(nh.nf2.beds.age.65plus.pr, aes(as.character(year), age.65plus.nh.nf2.beds)) +
   facet_wrap(~planning.region, ncol = 2) +
-  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nNumber of NH and NF2 beds = ", comma(nh.nf2.beds), "\nPopulation age 75 plus: ", comma(age.75plus), "\nNumber of 75 plus per available bed: ", comma(age.75plus.nh.nf2.beds), sep = ""))) +
-  geom_label(aes(label = comma(age.75plus.nh.nf2.beds, accuracy = 1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
-  labs(x="", y = "", color="", title = "Number of 75 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 75+ per nursing home bed capacity has increased by 81%")+
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nNumber of NH and NF2 beds = ", comma(nh.nf2.beds), "\nPopulation age 65 plus: ", comma(age.65plus), "\nNumber of 65 plus per available bed: ", comma(age.65plus.nh.nf2.beds), sep = ""))) +
+  geom_label(aes(label = comma(age.65plus.nh.nf2.beds, accuracy = 1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of 65 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 65+ per nursing home bed capacity has increased by 81%")+
   scale_y_continuous(labels=scales::comma)+
   theme_bar+
   theme(legend.position = "bottom",
         text = element_text(size = 18))
 
 
-girafe(ggobj = nh.nf2.beds.age.75plus.pr.plot, width_svg = 10, height_svg = 10) %>%
+girafe(ggobj = nh.nf2.beds.age.65plus.pr.plot, width_svg = 10, height_svg = 10) %>%
   girafe_options(opts_selection(type = "none"),
                  opts_sizing(rescale = FALSE))      
 
@@ -520,19 +522,110 @@ girafe(ggobj = nh.nf2.beds.age.75plus.pr.plot, width_svg = 10, height_svg = 10) 
 
 ## EDR
 
+There has been some EDR's in Greater Minnesota that are experiencing high levels of individuals 65 or older per NH and NF2 bed capacity;
+
+* EDR 2: Has been high for a while and is currently at 19 individuals per available capacity.
+* EDR 5: Super high ratio - currently at 25 individuals per 1 NH and NF2 bed capacity.
+* EDR 7E: 21 individuals per 1 bed capacity
+* EDR 7W: 19 individuals per 1 bed capacity
+
+Southwest is surprisingly low. 
+
+
 <br>
+
+```{r 65 plus per nh nf2 bed edr}
+nh.nf2.beds.age.65plus.edr <- nh.nf2.beds.age.65plus.county %>%
+  group_by(edr, planning.region, year) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds),
+            age.65plus = sum(age.65plus)) %>%
+  mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+nh.nf2.beds.age.65plus.edr.plot <- ggplot(nh.nf2.beds.age.65plus.edr, aes(as.character(year), age.65plus.nh.nf2.beds, group = edr, fill = edr)) +
+  facet_wrap(~planning.region, ncol = 2) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(edr, "\nYear: ", year, "\nNumber of NH and NF2 beds = ", comma(nh.nf2.beds), "\nPopulation age 65 plus: ", comma(age.65plus), "\nNumber of 65 plus per available bed: ", comma(age.65plus.nh.nf2.beds), sep = ""))) +
+  geom_label(aes(label = comma(age.65plus.nh.nf2.beds, accuracy = 1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of 65 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 65+ per nursing home bed capacity has increased by 81%")+
+  scale_y_continuous(labels=scales::comma)+
+  scale_fill_manual(values = color.edr,
+                    guide = guide_legend(ncol = 3)) +
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = nh.nf2.beds.age.65plus.edr.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
 
 <br>
 
 ## County
 
+At the county level, there is a considerable higher number of 65 residents in the central lakes region per 1 Nh and NF2 bed capacity.
+
 <br>
+
+```{r 65 plus per nh nf2 bed county}
+nh.nf2.beds.age.65plus.county.map <- nh.nf2.beds.age.65plus.county %>%
+  mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds,
+         age.65plus.nh.nf2.beds.bins = cut(age.65plus.nh.nf2.beds,
+                                           breaks = c(0, 20, 40, 60, 80, 2000),
+                                           labels = c("1-20 individuals 65+", "20-40 individuals 65+", "40-60 individuals 65+", "60-80 individuals 65+", "More than 80 individuals 65+"))) %>%
+  left_join(mn_counties[,c(5,7)], by = "countyfp")
+
+
+nh.nf2.beds.age.65plus.county.map.plot <- ggplot(data = filter(nh.nf2.beds.age.65plus.county.map, year == max(year))) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = age.65plus.nh.nf2.beds.bins, data_id = countyfp, tooltip = paste(COUNTY_NAME, "\nYear: ", year, "\nIndividuals aged 65 plus: ", comma(age.65plus), "\nNumber of NH and NF2 bed capacity: ", comma(nh.nf2.beds), "\nNumber of 65 plus per 1 bed: ", comma(age.65plus.nh.nf2.beds, accuracy = .1), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = brewer.pal(n = 6, "Reds")) +
+  labs(title = "Number of individuals 65 or older per 1 NH and NF2 bed capacity") +
+  theme(legend.box.margin = margin(50, 0, 0, -100),
+        text = element_text(size = 18))
+   
+
+girafe(ggobj = nh.nf2.beds.age.65plus.county.map.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))  
+```
 
 <br>
 
 ## RUCA
 
 <br>
+
+```{r 65 plus per nh nf2 bed ruca}
+nh.nf2.beds.age.65plus.ruca <- nh.nf2.beds.age.65plus.county %>%
+  group_by(Dem_Desc, year) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds),
+            age.65plus = sum(age.65plus)) %>%
+  mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+nh.nf2.beds.age.65plus.ruca.plot <- ggplot(nh.nf2.beds.age.65plus.ruca, aes(as.character(year), age.65plus.nh.nf2.beds)) +
+  facet_wrap(~Dem_Desc, ncol = 2) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(Dem_Desc, "\nYear: ", year, "\nNumber of NH and NF2 beds = ", comma(nh.nf2.beds), "\nPopulation age 65 plus: ", comma(age.65plus), "\nNumber of 65 plus per available bed: ", comma(age.65plus.nh.nf2.beds), sep = ""))) +
+  geom_label(aes(label = comma(age.65plus.nh.nf2.beds, accuracy = 1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of 65 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 65+ per nursing home bed capacity has increased by 81%")+
+  scale_y_continuous(labels=scales::comma)+
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = nh.nf2.beds.age.65plus.ruca.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
 
 <br>
 

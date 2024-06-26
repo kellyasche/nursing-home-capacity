@@ -146,6 +146,10 @@ master.age.65plus.county <- read_csv("Data/Population/Age/Master-age-65plus-coun
          planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
          edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"))
 
+master.age.projections.65plus.county <- read_csv("Data/Population/Age/Master-age-projections-65plus-county.csv") %>%
+  mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
+         planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
+         edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"))
 ```
 
 <br>
@@ -164,33 +168,26 @@ datatable(field.outline, class = "cell-border stripe", filter = "top", rownames 
 
 <br>
 
-With this exploration, the primary data we want are only the skilled nursing facilities and their capacity to provide nursing home beds. This dataset is a bit confusing to try and figure out which column is actually measuring beds. Here are all the columns that seem to have something to do with capacity;
+With this exploration, the primary data we want are only the skilled nursing facilities and their capacity to provide nursing home beds. This dataset is a bit confusing to try and figure out which column is actually measuring beds. Here are all the columns that seem to have something to do with capacity for which we are concerned here;
 
-* NH_BEDS: this will give us the total number of nursing home beds, which is also split into two categories
-* SNF_BEDS: this is the federal medicare eligible beds
-* SNFNF_BEDS: this is the federal medicare and medicaid eligible beds.
+* NH_BEDS: State licensed, number of nursing home beds
+* SNF_BEDS: Federal medicare, number of skilled nursing facility beds
+* SNFNF_BEDS: Federal medicare/medicaid, number of dual skilled nursing facility and nursing facility beds
 * NF1_Beds: Federal Medicaid, number of nursing facility beds (Nursing home)
-* NF2_Beds: Federal Medicaid, number of nursing facility beds (Bording care home)
+* NF2_Beds: Federal Medicaid, number of nursing facility beds (Boarding care home)
 
 I think we need better descriptions here to decipher what is going on because some of these a sub-categories of others. For example, NH_BEDS seems to be the sum of SNF_BEDS and SNFNF_Beds.
-
-```{r testing, echo=FALSE}
-nursing.beds <- c("year", "NH_BEDS", "SNF_BEDS", "SNFNF_BEDS", "NF1_BEDS", "NF2_BEDS")
-test <- master.original %>%
-  select(HFID, NAME, nursing.beds)
-```
 
 * NH_BEDS = SNF_BEDS + SNFNF_BEDS + NF1_BEDS
 
 So what is the difference between those three that add up to NH_BEDS? 
 * SNF_BEDS =  are only medicare eligible beds.
 * SNFNF_BEDS =  are medicare and medicaid eligible beds.
-* NF1_BEDS = 
+* NF1_BEDS = are only medicaid beds
 
+And all of these are located in skilled nursing facilities. NF2_BEDS is not included in the NH_BEDS. Why? These beds are not in a skilled nursing facility, but rather in a "group home" which is a small, private facility. 
 
-* NF2_BEDS is not included in the NH_BEDS. Why? These beds are not in a skilled nursing facility, but rather in a "group home" which is a small, private facility. 
-
-So with this figured out, let's create a dataset that has all five of these columns because it will be good to be able to split out these further in the analysis.
+So with this figured out, let's create a dataset that has all five of these columns because it will be good to be able to split these out further in the analysis.
 
 ```{r create master snf beds}
 master.snf <- master.original %>%
@@ -435,11 +432,25 @@ girafe(ggobj = nh.nf2.beds.ruca.plot, width_svg = 10, height_svg = 10) %>%
 
 # Availability per 65+ resident{.tabset}
 
-The average age of nursing home residents is about 83, however, rural folks tend to get sicker earlier so let's use the 65+ age cohort to measure the ratio of residents per bed capacity.
+The average age of nursing home residents is about 83, however, rural folks tend to get sicker earlier so let's use the 65+ age cohort to measure the ratio of residents per bed capacity. 
+
+In addition, we have access to the number of 65+ projections for each county using the MN State Demographic Center estimates. I will include those in there. For those, we will just assume that the bed capacity will remain constant from 2024 onwards.
+
+The charts below show that there has been a significant increase in the number of 65+ individuals per bed capacity all across Minnesota. In fact, not a single county has less 65+ per bed capacity in 2024 compared to 2005. And the number of 65+ per bed will peak across the state between 2030 and 2035.
+
+However, some areas have higher 65+ individuals per bed capacity than others. The seven county metro has the highest out of all the planning regions, but this is largely driven by four counties - Anoka, Washington, Dakota, Carver. In Greater Minnesota, the highest number of 65+ per bed capacity is in the central lakes - Cass, Crow Wing and Hubbard. 
+
+Overall, Southwest Minnesota seems to have the lowest values of 65+ per bed capacity.
 
 <br>
 
 ```{r combine snf beds and age 65 plus, echo=FALSE}
+age65plus.projections.county <- master.age.projections.65plus.county %>%
+  filter(year %in% c(2030, 2035, 2040))
+
+age.65plus.old.projections.county <- age65plus.projections.county %>%
+  rbind(master.age.65plus.county)
+
 nh.nf2.beds.age.65plus.county <- nh.nf2.beds.master %>%
   filter(!is.na(countyfp)) %>%
   group_by(year, countyfp, COUNTY_NAME) %>%
@@ -450,19 +461,29 @@ nh.nf2.beds.age.65plus.county <- nh.nf2.beds.master %>%
   mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%
   ungroup() %>%
   filter(year > 2005) %>%
-  left_join(master.age.65plus.county, by = c("countyfp", "year")) 
+  select(year, countyfp, COUNTY_NAME, nh.nf2.beds) %>%
+  pivot_wider(names_from = year, values_from = nh.nf2.beds) %>%
+  mutate(`2030` = `2024`,
+         `2035` = `2024`,
+         `2040` = `2024`) %>%
+  pivot_longer(names_to = "year", values_to = "nh.nf2.beds", `2010`:`2040`) %>%
+  mutate(year = as.integer(year)) %>%
+  left_join(age.65plus.old.projections.county, by = c("countyfp", "year")) 
+
 ```
 
 <br>
 
 ## Minnesota
 
+The number of people 65+ per beds has increased significantly since 2005. By 2024 it increased from 20.4 people 65+ per bed capacity to 41.9 people 65+.
+
 <br>
 
-```{r 65 plus per nh nf2 bed MN}
+```{r 65 plus per nh nf2 bed MN, echo=FALSE}
 nh.nf2.beds.age.65plus.mn <- nh.nf2.beds.age.65plus.county %>%
   group_by(year) %>%
-  summarize(nh.nf2.beds = sum(nh.nf2.beds),
+  summarize(nh.nf2.beds = sum(nh.nf2.beds, na.rm = TRUE),
             age.65plus = sum(age.65plus)) %>%
   mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds) %>%
   ungroup() 
@@ -470,7 +491,7 @@ nh.nf2.beds.age.65plus.mn <- nh.nf2.beds.age.65plus.county %>%
 nh.nf2.beds.age.65plus.mn.plot <- ggplot(nh.nf2.beds.age.65plus.mn, aes(as.character(year), age.65plus.nh.nf2.beds)) +
   geom_col_interactive(position = "dodge", aes(data_id = year, tooltip = paste("Minnesota", "\nYear: ", year, "\nNumber of NH and NF2 beds = ", comma(nh.nf2.beds), "\nPopulation age 65 plus: ", comma(age.65plus), "\nNumber of 65 plus per available bed: ", comma(age.65plus.nh.nf2.beds), sep = ""))) +
   geom_label(aes(label = comma(age.65plus.nh.nf2.beds)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
-  labs(x="", y = "", color="", title = "Number of 65 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 65+ per nursing home bed capacity has increased by 81%")+
+  labs(x="", y = "", color="", title = "Number of 65 plus individuals per NH and NF2 bed available", subtitle = "The number of people aged 65+ per nursing home bed capacity has increased by 81%\nfrom 2010 to 2024")+
   scale_y_continuous(labels=scales::comma)+
   theme_bar+
   theme(legend.position = "bottom",
@@ -491,10 +512,10 @@ The largest changes in the number of 65+ individuals per nh and NF2 bed capacity
 
 <br>
 
-```{r 65 plus per nh nf2 bed pr}
+```{r 65 plus per nh nf2 bed pr, echo=FALSE}
 nh.nf2.beds.age.65plus.pr <- nh.nf2.beds.age.65plus.county %>%
   group_by(planning.region, year) %>%
-  summarize(nh.nf2.beds = sum(nh.nf2.beds),
+  summarize(nh.nf2.beds = sum(nh.nf2.beds, na.rm = TRUE),
             age.65plus = sum(age.65plus)) %>%
   mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds) %>%
   ungroup() %>%
@@ -534,10 +555,10 @@ Southwest is surprisingly low.
 
 <br>
 
-```{r 65 plus per nh nf2 bed edr}
+```{r 65 plus per nh nf2 bed edr, echo=FALSE}
 nh.nf2.beds.age.65plus.edr <- nh.nf2.beds.age.65plus.county %>%
   group_by(edr, planning.region, year) %>%
-  summarize(nh.nf2.beds = sum(nh.nf2.beds),
+  summarize(nh.nf2.beds = sum(nh.nf2.beds, na.rm = TRUE),
             age.65plus = sum(age.65plus)) %>%
   mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds) %>%
   ungroup() %>%
@@ -567,24 +588,40 @@ girafe(ggobj = nh.nf2.beds.age.65plus.edr.plot, width_svg = 10, height_svg = 10)
 
 ## County
 
-At the county level, there is a considerable higher number of 65 residents in the central lakes region per 1 Nh and NF2 bed capacity.
+At the county level, there is a considerable higher number of 65 residents in the central lakes region per 1 Nh and NF2 bed capacity. 
+
+* Hubbarb: 114
+* Cass: 270.6
+* Crow Wing: 103.0
+* Pine: 1387
+
+In addition, a couple of the suburbs have significantly higher number of 65+ per bed capacity.
+
+* Anoka: 147.7
+* Washington: 80.4
+* Dakota: 89.1
+* Carver: 104.3
 
 <br>
 
-```{r 65 plus per nh nf2 bed county}
+```{r 65 plus per nh nf2 bed county, echo=FALSE}
 nh.nf2.beds.age.65plus.county.map <- nh.nf2.beds.age.65plus.county %>%
   mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds,
          age.65plus.nh.nf2.beds.bins = cut(age.65plus.nh.nf2.beds,
                                            breaks = c(0, 20, 40, 60, 80, 2000),
-                                           labels = c("1-20 individuals 65+", "20-40 individuals 65+", "40-60 individuals 65+", "60-80 individuals 65+", "More than 80 individuals 65+"))) %>%
+                                           labels = c("1-20 individuals 65+", "20-40 individuals 65+", "40-60 individuals 65+", "60-80 individuals 65+", "More than 80 individuals 65+")))%>%
+group_by(countyfp) %>%
+  mutate(better.worse = ifelse(age.65plus.nh.nf2.beds > age.65plus.nh.nf2.beds[year == min(year)], "Worse", "Better")) %>%
+  ungroup() %>%
   left_join(mn_counties[,c(5,7)], by = "countyfp")
 
 
-nh.nf2.beds.age.65plus.county.map.plot <- ggplot(data = filter(nh.nf2.beds.age.65plus.county.map, year == max(year))) +
+nh.nf2.beds.age.65plus.county.map.plot <- ggplot(data = filter(nh.nf2.beds.age.65plus.county.map, year == 2024)) +
   geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = age.65plus.nh.nf2.beds.bins, data_id = countyfp, tooltip = paste(COUNTY_NAME, "\nYear: ", year, "\nIndividuals aged 65 plus: ", comma(age.65plus), "\nNumber of NH and NF2 bed capacity: ", comma(nh.nf2.beds), "\nNumber of 65 plus per 1 bed: ", comma(age.65plus.nh.nf2.beds, accuracy = .1), sep = ""))) +
   theme_sf+
   scale_fill_manual(values = brewer.pal(n = 6, "Reds")) +
-  labs(title = "Number of individuals 65 or older per 1 NH and NF2 bed capacity") +
+  labs(title = "Number of individuals 65 or older per 1 NH and NF2 bed capacity",
+       subtitle = "Highest number of 65+ in 2024 is in the central lakes and suburbs.") +
   theme(legend.box.margin = margin(50, 0, 0, -100),
         text = element_text(size = 18))
    
@@ -598,12 +635,14 @@ girafe(ggobj = nh.nf2.beds.age.65plus.county.map.plot, width_svg = 10, height_sv
 
 ## RUCA
 
+As expected, the more rural, the less people 65+ per bed capacity. 
+
 <br>
 
-```{r 65 plus per nh nf2 bed ruca}
+```{r 65 plus per nh nf2 bed ruca, echo=FALSE}
 nh.nf2.beds.age.65plus.ruca <- nh.nf2.beds.age.65plus.county %>%
   group_by(Dem_Desc, year) %>%
-  summarize(nh.nf2.beds = sum(nh.nf2.beds),
+  summarize(nh.nf2.beds = sum(nh.nf2.beds, na.rm = TRUE),
             age.65plus = sum(age.65plus)) %>%
   mutate(age.65plus.nh.nf2.beds = age.65plus / nh.nf2.beds) %>%
   ungroup() %>%
@@ -629,3 +668,6 @@ girafe(ggobj = nh.nf2.beds.age.65plus.ruca.plot, width_svg = 10, height_svg = 10
 
 <br>
 
+# Medicare vs Medicaid beds
+
+The next question is whether any type of bed with atteched payment eligibilty has changed more than another. 

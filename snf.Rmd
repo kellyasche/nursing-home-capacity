@@ -181,6 +181,7 @@ I think we need better descriptions here to decipher what is going on because so
 * NH_BEDS = SNF_BEDS + SNFNF_BEDS + NF1_BEDS
 
 So what is the difference between those three that add up to NH_BEDS? 
+
 * SNF_BEDS =  are only medicare eligible beds.
 * SNFNF_BEDS =  are medicare and medicaid eligible beds.
 * NF1_BEDS = are only medicaid beds
@@ -670,4 +671,260 @@ girafe(ggobj = nh.nf2.beds.age.65plus.ruca.plot, width_svg = 10, height_svg = 10
 
 # Medicare vs Medicaid beds
 
-The next question is whether any type of bed with atteched payment eligibilty has changed more than another. 
+The next question is whether any type of bed with attached payment eligibility has changed more than another. In the previous sections, we measured capacity by combining NH_Beds and NH2_Beds. NH_Beds was actually the total of SNF_Beds, SNFNF_Beds, and NF1_Beds. 
+
+For this we will break out all 4 categories separately to see if any of them are seeing significant declines or increases. Here, again, are the definitions of these bed types;
+
+* SNF_BEDS: Federal medicare, number of skilled nursing facility beds
+* NF1_Beds: Federal medicaid, number of nursing facility beds (Nursing home)
+* NF2_Beds: Federal medicaid, number of nursing facility beds (Boarding care home)
+* SNFNF_BEDS: Federal medicare/medicaid, number of dual skilled nursing facility and nursing facility beds
+
+Honestly, I think it's going to be easier if I relabel these columns so they match their definitions.
+
+* SNF_BEDS = medicare.only
+* NF1_BEDS = medicaid.only.nursing
+* NF2_BEDS = medicaid.only.boarding
+* SNFNF_BEDS = medicare.medicaid
+
+<br>
+
+```{r master care vs caid capacity}
+master.caid.care <- master.original %>%
+  select(year, LIC_TYPE, SNF_BEDS, SNFNF_BEDS, NF1_BEDS, NF2_BEDS, HFID, NAME, CITY, STATE, ZIP, COUNTY_NAME, countyfp, Dem_Desc, edr, planning.region) %>%
+  rename(medicare.only = SNF_BEDS,
+         medicaid.only.nursing = NF1_BEDS,
+         medicaid.only.boarding = NF2_BEDS,
+         medicare.medicaid = SNFNF_BEDS)
+
+names(master.caid.care)
+
+head(master.caid.care)
+```
+
+## Proportion of payer type{.tabset}
+
+Let's first take a look at what the proportion of payer type there is and whether it's about equal across the regions in Minnesota. We will use them most recent year.
+
+The breakdowns below show that nearly the entire state has 100% of their beds as medicare and medicaid eligible. However, Ramsay and Hennepin have lower share that are dual eligible with medcaid only (boarding homes) being a bit larger of a percentage. Rosseau county is another outlier where they have 85% of their beds as dual eligible, and the rest are medcaid only (nursing home) eligible.
+
+<br>
+
+### Minnesota
+
+The chart below shows that, by far, the largest share of beds are medicare and medicaid type. It's 95% of the beds capacity in Minnesota.
+
+<br>
+
+```{r care vs caid capacity Minnesota, echo=FALSE}
+caid.care.mn <- master.caid.care %>%
+  group_by(year) %>%
+  summarize(medicare.only = sum(medicare.only, na.rm = TRUE),
+            medicaid.only.nursing = sum(medicaid.only.nursing, na.rm = TRUE),
+            medicaid.only.boarding = sum(medicaid.only.boarding, na.rm = TRUE),
+            medicare.medicaid = sum(medicare.medicaid, na.rm = TRUE)) %>%
+  ungroup() %>%
+  pivot_longer(names_to = "bed.type", values_to = "beds", 2:ncol(.)) %>%
+  group_by(bed.type) %>%
+  mutate(pct.change.2005 = (beds - beds[year == min(year)]) / beds[year == min(year)]) %>%
+  ungroup() %>%
+  group_by(year) %>%
+  mutate(pct.share = beds / sum(beds)) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+caid.care.mn.plot <- ggplot(caid.care.mn, aes(as.factor(year), pct.share, fill = bed.type, group = bed.type)) +
+  geom_bar(stat = "identity", position = "dodge", aes(data_id = data_id, tooltip = paste(year, "\nBed type: ", bed.type, "\nNumber of beds: ", comma(beds), "\nPercent share of beds: ", percent(pct.share, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(pct.share, accuracy = .1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Percent share of skilled nursing beds")+
+  scale_y_continuous(labels=scales::percent)+
+  theme_bar+
+  scale_fill_manual(values = brewer.pal(n = 6, "RdYlBu"),
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = caid.care.mn.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+
+<br>
+
+### Planning Region
+
+The chart below shows that the dual payment type (medicare and medicaid) are even a larger share of the total beds outside of the seven metro. The seven county metro is where the bed type can be medicare or medicaid only. And mostly, its the medicaid only beds provided at boarding institutions.
+
+<br>
+
+```{r care vs caid capacity planning region, echo=FALSE}
+caid.care.pr <- master.caid.care %>%
+  filter(!is.na(planning.region)) %>%
+  group_by(year, planning.region) %>%
+  summarize(medicare.only = sum(medicare.only, na.rm = TRUE),
+            medicaid.only.nursing = sum(medicaid.only.nursing, na.rm = TRUE),
+            medicaid.only.boarding = sum(medicaid.only.boarding, na.rm = TRUE),
+            medicare.medicaid = sum(medicare.medicaid, na.rm = TRUE)) %>%
+  ungroup() %>%
+  pivot_longer(names_to = "bed.type", values_to = "beds", 3:ncol(.)) %>%
+  group_by(bed.type, planning.region) %>%
+  mutate(pct.change.2005 = (beds - beds[year == min(year)]) / beds[year == min(year)]) %>%
+  ungroup() %>%
+  group_by(year, planning.region) %>%
+  mutate(pct.share = beds / sum(beds)) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+caid.care.pr.plot <- ggplot(caid.care.pr, aes(as.factor(year), pct.share, fill = bed.type, group = bed.type)) +
+  facet_wrap(~planning.region, ncol = 2) +
+  geom_bar_interactive(stat = "identity", position = "dodge", aes(data_id = data_id, tooltip = paste(year, "\n", planning.region, "\nBed type: ", bed.type, "\nNumber of beds: ", comma(beds), "\nPercent share of beds: ", percent(pct.share, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(pct.share, accuracy = .1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Percent share of skilled nursing beds")+
+  scale_y_continuous(labels=scales::percent)+
+  theme_bar+
+  scale_fill_manual(values = brewer.pal(n = 6, "RdYlBu"),
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = caid.care.pr.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+
+<br>
+
+### County map
+
+Since the dual eligible beds make up such a large percentage, we are going to skip the EDR breakdown and just look at what the proportion looks like by county. 
+
+The maps below show that nearly the entire state has 100% of their skilled nursing beds as medicare and medicaid eligible. Hennepin and Ramsay have it split a bit more with 6% of their beds as either medicare only or medicaid only (boarding homes). Rosseau is also interesting. 85% of their beds are medicare and medicaid eligible, but they also have a larger 15% of their beds as medicaid only (nursing homes) eligible. It's a bit of an outlier compared to the rest of the state.
+
+<br>
+
+```{r caid care county, echo=FALSE}
+caid.care.county <- master.caid.care %>%
+  filter(!is.na(countyfp)) %>%
+  group_by(year, countyfp, COUNTY_NAME) %>%
+  summarize(medicare.only = sum(medicare.only, na.rm = TRUE),
+            medicaid.only.nursing = sum(medicaid.only.nursing, na.rm = TRUE),
+            medicaid.only.boarding = sum(medicaid.only.boarding, na.rm = TRUE),
+            medicare.medicaid = sum(medicare.medicaid, na.rm = TRUE)) %>%
+  ungroup() %>%
+  pivot_longer(names_to = "bed.type", values_to = "beds", 4:ncol(.)) %>%
+  group_by(bed.type, countyfp, COUNTY_NAME) %>%
+  mutate(pct.change.2005 = (beds - beds[year == min(year)]) / beds[year == min(year)]) %>%
+  ungroup() %>%
+  group_by(year, countyfp, COUNTY_NAME) %>%
+  mutate(pct.share = beds / sum(beds)) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()),
+         bed.type = as.factor(bed.type)) %>%
+  left_join(mn_counties[,c(5,7)], by = "countyfp") 
+
+medicare.medicaid.county <- caid.care.county %>%
+  filter(bed.type == "medicare.medicaid") %>%
+  mutate(pct.share.bins = cut(pct.share,
+                                      breaks = c(0, .85, .9, .95, .999999999, 1.5),
+                                      labels = c("80% to 85%", "85% to 90%", "90% to 95%", "95% to 99%", "100%")))
+
+medicaid.only.nursing.county <- caid.care.county %>%
+  filter(bed.type == "medicaid.only.nursing") %>%
+  mutate(pct.share.bins = cut(pct.share,
+                              breaks = c(-1, 0, .03, .06, .09, .2),
+                              labels = c("0%", "1% to 3%", "3% to 6%", "6% to 9%", "9% to 16%")))
+
+medicaid.only.boarding.county <- caid.care.county %>%
+  filter(bed.type == "medicaid.only.boarding") %>%
+  mutate(pct.share.bins = cut(pct.share,
+                              breaks = c(-1, 0, .03, .06, .09, .2),
+                              labels = c("0%", "1% to 3%", "3% to 6%", "6% to 9%", "9% to 16%")))
+
+medicare.only.county <- caid.care.county %>%
+  filter(bed.type == "medicare.only") %>%
+  mutate(pct.share.bins = cut(pct.share,
+                              breaks = c(-1, 0, .03, .06, .09, .2),
+                              labels = c("0%", "1% to 3%", "3% to 6%", "6% to 9%", "9% to 16%")))
+
+title <- ggdraw() + 
+  draw_label(
+    "Percent share of total beds, 2024",
+    fontface = 'bold',
+    x = 0,
+    hjust = 0
+  ) +
+  theme(
+    # add margin on the left of the drawing canvas,
+    # so title is aligned with left edge of first plot
+    plot.margin = margin(-10, 0, 0, 0)
+  )
+
+
+medicare.medicaid.county.plot <- ggplot(data = filter(medicare.medicaid.county, year == max(year))) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = pct.share.bins, data_id = data_id, tooltip = paste(COUNTY_NAME, "\n", year, "\nBed payment type: ", bed.type, "\nNumber of beds: ", comma(beds), "\nProportion of total beds: ", percent(pct.share, accuracy = .1), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = brewer.pal(n = 6, "PuBu"),
+                    guide = guide_legend(ncol = 3)) +
+  labs(title = "Medicare and medicaid ") +
+  theme(legend.position = "bottom")
+
+medicare.only.county.plot <- ggplot(data = filter(medicare.only.county, year == max(year))) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = pct.share.bins, data_id = data_id, tooltip = paste(COUNTY_NAME, "\n", year, "\nBed payment type: ", bed.type, "\nNumber of beds: ", comma(beds), "\nProportion of total beds: ", percent(pct.share, accuracy = .1), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = brewer.pal(n = 6, "PuBu"),
+                    guide = guide_legend(ncol = 2)) +
+  labs(title = "Medicare only") +
+  theme(legend.position = "bottom")
+
+medicaid.only.nursing.county.plot <- ggplot(data = filter(medicaid.only.nursing.county, year == max(year))) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = pct.share.bins, data_id = data_id, tooltip = paste(COUNTY_NAME, "\n", year, "\nBed payment type: ", bed.type, "\nNumber of beds: ", comma(beds), "\nProportion of total beds: ", percent(pct.share, accuracy = .1), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = brewer.pal(n = 6, "PuBu"),
+                    guide = guide_legend(ncol = 2)) +
+  labs(title = "Medicaid only (nursing homes)") +
+  theme(legend.position = "bottom")
+
+medicaid.only.boarding.county.plot <- ggplot(data = filter(medicaid.only.boarding.county, year == max(year))) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = pct.share.bins, data_id = data_id, tooltip = paste(COUNTY_NAME, "\n", year, "\nBed payment type: ", bed.type, "\nNumber of beds: ", comma(beds), "\nProportion of total beds: ", percent(pct.share, accuracy = .1), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = brewer.pal(n = 6, "PuBu"),
+                    guide = guide_legend(ncol = 2)) +
+  labs(title = "Medicaid only (boarding homes)") +
+  theme(legend.position = "bottom")
+
+title <- ggdraw() + 
+  draw_label(
+    "Percent share of total beds, 2024",
+    fontface = 'bold',
+    x = 0,
+    hjust = 0,
+    size = 20
+  ) +
+  theme(
+    # add margin on the left of the drawing canvas,
+    # so title is aligned with left edge of first plot
+    plot.margin = margin(0, 0, 0, 0)
+  )
+
+girafe( ggobj =  plot_grid(title, NULL, medicare.medicaid.county.plot, medicare.only.county.plot, NULL, NULL, medicaid.only.nursing.county.plot, medicaid.only.boarding.county.plot, ncol = 2, rel_heights = c(.1,1,.1,1)), height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE) ,
+                 opts_sizing(rescale = FALSE))
+
+
+
+
+```
+
+<br>
+
+## Trends by payment eligibility
+
+Since nearly all counties only have 100% of their beds as dual eligible, let's focus only on the 7 counties that are not 100%. Questions that rise are whether they are experiencing declines in only the dual eligible beds or is it pretty equal across the payment eligibility.
+

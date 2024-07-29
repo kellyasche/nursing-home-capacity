@@ -926,5 +926,74 @@ girafe( ggobj =  plot_grid(title, NULL, medicare.medicaid.county.plot, medicare.
 
 ## Trends by payment eligibility
 
-Since nearly all counties only have 100% of their beds as dual eligible, let's focus only on the 7 counties that are not 100%. Questions that rise are whether they are experiencing declines in only the dual eligible beds or is it pretty equal across the payment eligibility.
+Since nearly all counties only have 100% of their beds as dual eligible, let's focus only on Roseau, St. Louis and Olmsted counties. Questions that rise are whether they are experiencing declines in only the dual eligible beds or is it pretty equal across the payment eligibility.
+
+The chart below shows that the dual eligible beds were the most common to decline in capacity. In St. Louis county they've had a decline of 541 dual eligible beds since 2005, 20 beds in Roseau, and 60 beds in Olmsted.
+
+Interestingly, Roseau also experienced a decline of 20 beds that were medicaid only within boarding home beds. 
+
+<br>
+
+```{r non dual beds}
+non.dual.counties <- caid.care.county %>%
+  filter(COUNTY_NAME %in% c("Roseau", "St. Louis", "Sherburne", "Ramsey", "Hennepin", "Dakota", "Olmsted")) %>%
+  select(year, countyfp, COUNTY_NAME, bed.type, beds, geometry) %>%
+  group_by(countyfp, COUNTY_NAME, bed.type) %>%
+  mutate(bed.type.change.n = beds - beds[year == min(year)],
+         bed.type.change.pct = (beds - beds[year == min(year)]) / beds[year == min(year)]) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+names(non.dual.counties)
+
+non.dual.counties.plot <- ggplot(filter(non.dual.counties, year == max(year) & COUNTY_NAME %in% c("Roseau", "St. Louis", "Olmsted")), aes(bed.type, bed.type.change.pct, fill = COUNTY_NAME, group = COUNTY_NAME)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(COUNTY_NAME, "\n", year, "\nBed type: ", bed.type, "\nNumber of beds: ", beds, "\nChange in number of beds since 2005: ", comma(bed.type.change.n), "\nPercent change since 2005: ", percent(bed.type.change.pct, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(bed.type.change.pct, accuracy = .1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  coord_flip() +
+  labs(x="", y = "", color="", title = "Change in number of beds since 2005 by bed payment type")+
+  scale_y_continuous(labels=scales::percent)+
+  theme_bar+
+  scale_fill_manual(values = brewer.pal(n = 7, "RdYlBu"),
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = non.dual.counties.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+# Swing beds
+
+One other aspect worth exploring is the trends in the number of swing beds available in rural Minnesota. 
+
+A swing bed is a service that rural hospitals and critical access hospitals (CAHs) with a Medicare provider agreement provide that allows a patient to transition from acute care to skilled nursing facility (SNF) care without leaving the hospital. This allows a patient to continue receiving services in the hospital even though acute care is no longer required.
+
+State law allows Minnesota Health Care Programs (MHCP) payments for swing bed services provided by a designated licensed hospital, if the hospital meets the following criteria:
+
+* The hospital is the sole community provider, or is a public hospital owned by a government entity with 15 or fewer acute care beds
+* The MHCP member requires skilled nursing care per Medicaid guidelines
+* A nursing home bed is not available within 25 miles of the facility
+* The member is transferred from an acute care hospital bed and acute care is no longer needed
+* The member must receive a preadmission screening before placement as specified in the Preadmission Screening section of this manual section
+
+<br>
+
+
+# Assisted living capacity
+
+Next we will assess how much change there's been in the assisted living capacity. MN Department of Health only started licensing these since 2021 so let's see what kind of data we have here.
+
+<br>
+
+```{r master assisted living}
+master.al <- master.original
+
+names(master.al)
+```
 

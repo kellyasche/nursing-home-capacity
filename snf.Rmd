@@ -199,7 +199,11 @@ master.snf
 
 <br>
 
-# Change in skilled nursing beds{.tabset}
+# Beds
+
+In this section we explore trends in the number of beds available each year by region - from total beds, to whether there are differences in the payment eligibility for beds, and the number of swing beds available in critical access hospitals.
+
+## Total beds{.tabset}
 
 This section will explore what changes have taken place in the number of licensed skilled nursing beds by region and rurality. For this exploration we will use the sum of NH_BEDS + NF2_BEDS.
 
@@ -217,7 +221,7 @@ There are `r comma(nrow(nh.nf2.beds.master))` facilities with these types of bed
 
 <br>
 
-## Minnesota
+### Minnesota
 
 The number of nursing home beds has decreased 33% since 2005 in the state of Minnesota. Overall in Minnesota, the number of skilled nursing home and facility beds available has declined by 33.3%, from 37,718 beds in 2005 to 25,173 in 2024.
 
@@ -262,7 +266,7 @@ girafe(ggobj = nh.nf2.beds.mn.plot, width_svg = 10, height_svg = 10) %>%
 
 <br>
 
-## Planning Region
+### Planning Region
 
 The planning regions with the largest percentage declines in the number of beds are Northwest (-43%) and Southwest (-38%). The lowest was actually in Central Minnesota with a decline of -25.2%. 
 
@@ -302,7 +306,7 @@ girafe(ggobj = nh.nf2.beds.pr.plot, width_svg = 10, height_svg = 10) %>%
 
 <br>
 
-## EDR
+### EDR
 
 These EDRs all have declines in the number of beds that exceed the state decline;
 
@@ -351,7 +355,7 @@ girafe(ggobj = nh.nf2.beds.edr.plot, width_svg = 10, height_svg = 10) %>%
 
 <br>
 
-## County
+### County
 
 This clearly shows that the more rural a group of counties is, the larger the decline in the number of licensed beds.
 
@@ -390,7 +394,7 @@ girafe(ggobj = nh.nf2.beds.county.map, width_svg = 10, height_svg = 10) %>%
 
 <br>
 
-## RUCA
+### RUCA
 
 This clearly shows that the more rural a group of counties is, the larger the decline in the number of licensed beds.
 
@@ -431,7 +435,7 @@ girafe(ggobj = nh.nf2.beds.ruca.plot, width_svg = 10, height_svg = 10) %>%
 
 <br>
 
-# Availability per 65+ resident{.tabset}
+## Availability per 65+ resident{.tabset}
 
 The average age of nursing home residents is about 83, however, rural folks tend to get sicker earlier so let's use the 65+ age cohort to measure the ratio of residents per bed capacity. 
 
@@ -475,7 +479,7 @@ nh.nf2.beds.age.65plus.county <- nh.nf2.beds.master %>%
 
 <br>
 
-## Minnesota
+### Minnesota
 
 The number of people 65+ per beds has increased significantly since 2005. By 2024 it increased from 20.4 people 65+ per bed capacity to 41.9 people 65+.
 
@@ -507,7 +511,7 @@ girafe(ggobj = nh.nf2.beds.age.65plus.mn.plot, width_svg = 10, height_svg = 10) 
 ```
 <br>
 
-## Planning Region
+### Planning Region
 
 The largest changes in the number of 65+ individuals per nh and NF2 bed capacity has been in the seven-county metro. Southwest has had the lowest.
 
@@ -542,7 +546,7 @@ girafe(ggobj = nh.nf2.beds.age.65plus.pr.plot, width_svg = 10, height_svg = 10) 
 
 <br>
 
-## EDR
+### EDR
 
 There has been some EDR's in Greater Minnesota that are experiencing high levels of individuals 65 or older per NH and NF2 bed capacity;
 
@@ -587,7 +591,7 @@ girafe(ggobj = nh.nf2.beds.age.65plus.edr.plot, width_svg = 10, height_svg = 10)
 
 <br>
 
-## County
+### County
 
 At the county level, there is a considerable higher number of 65 residents in the central lakes region per 1 Nh and NF2 bed capacity. 
 
@@ -634,7 +638,7 @@ girafe(ggobj = nh.nf2.beds.age.65plus.county.map.plot, width_svg = 10, height_sv
 
 <br>
 
-## RUCA
+### RUCA
 
 As expected, the more rural, the less people 65+ per bed capacity. 
 
@@ -669,7 +673,7 @@ girafe(ggobj = nh.nf2.beds.age.65plus.ruca.plot, width_svg = 10, height_svg = 10
 
 <br>
 
-# Medicare vs Medicaid beds
+## Medicare vs Medicaid beds
 
 The next question is whether any type of bed with attached payment eligibility has changed more than another. In the previous sections, we measured capacity by combining NH_Beds and NH2_Beds. NH_Beds was actually the total of SNF_Beds, SNFNF_Beds, and NF1_Beds. 
 
@@ -702,7 +706,7 @@ names(master.caid.care)
 head(master.caid.care)
 ```
 
-## Proportion of payer type{.tabset}
+### Proportion of payer type{.tabset}
 
 Let's first take a look at what the proportion of payer type there is and whether it's about equal across the regions in Minnesota. We will use them most recent year.
 
@@ -710,7 +714,7 @@ The breakdowns below show that nearly the entire state has 100% of their beds as
 
 <br>
 
-### Minnesota
+#### Minnesota
 
 The chart below shows that, by far, the largest share of beds are medicare and medicaid type. It's 95% of the beds capacity in Minnesota.
 
@@ -754,7 +758,7 @@ girafe(ggobj = caid.care.mn.plot, width_svg = 10, height_svg = 10) %>%
 
 <br>
 
-### Planning Region
+#### Planning Region
 
 The chart below shows that the dual payment type (medicare and medicaid) are even a larger share of the total beds outside of the seven metro. The seven county metro is where the bed type can be medicare or medicaid only. And mostly, its the medicaid only beds provided at boarding institutions.
 
@@ -800,7 +804,7 @@ girafe(ggobj = caid.care.pr.plot, width_svg = 10, height_svg = 10) %>%
 
 <br>
 
-### County map
+#### County map
 
 Since the dual eligible beds make up such a large percentage, we are going to skip the EDR breakdown and just look at what the proportion looks like by county. 
 
@@ -924,7 +928,7 @@ girafe( ggobj =  plot_grid(title, NULL, medicare.medicaid.county.plot, medicare.
 
 <br>
 
-## Trends by payment eligibility
+### Trends by payment eligibility
 
 Since nearly all counties only have 100% of their beds as dual eligible, let's focus only on Roseau, St. Louis and Olmsted counties. Questions that rise are whether they are experiencing declines in only the dual eligible beds or is it pretty equal across the payment eligibility.
 
@@ -968,7 +972,7 @@ girafe(ggobj = non.dual.counties.plot, width_svg = 7, height_svg = 7) %>%
 
 <br>
 
-# Swing beds
+## Swing beds{.tabset}
 
 One other aspect worth exploring is the trends in the number of swing beds available in rural Minnesota. 
 
@@ -980,20 +984,7 @@ State law allows Minnesota Health Care Programs (MHCP) payments for swing bed se
 * The MHCP member requires skilled nursing care per Medicaid guidelines
 * A nursing home bed is not available within 25 miles of the facility
 * The member is transferred from an acute care hospital bed and acute care is no longer needed
-* The member must receive a preadmission screening before placement as specified in the Preadmission Screening section of this manual section
+* The member must receive a preadmission screening before placement as specified in the Preadmission Screening section of this manual section.
 
-<br>
-
-
-# Assisted living capacity
-
-Next we will assess how much change there's been in the assisted living capacity. MN Department of Health only started licensing these since 2021 so let's see what kind of data we have here.
-
-<br>
-
-```{r master assisted living}
-master.al <- master.original
-
-names(master.al)
-```
+Okay, so let's load up the master data and see what we have here. The column "SWING" identifies whether the facility has a medicare certified swing bed. So let's filter out everything so we only have those facilities.
 

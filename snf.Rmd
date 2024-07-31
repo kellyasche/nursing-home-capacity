@@ -988,3 +988,194 @@ State law allows Minnesota Health Care Programs (MHCP) payments for swing bed se
 
 Okay, so let's load up the master data and see what we have here. The column "SWING" identifies whether the facility has a medicare certified swing bed. So let's filter out everything so we only have those facilities.
 
+<br>
+
+# Facilities{.tabset}
+
+Okay, next let's see if there are any changes to the number of facilities. Essentially, is the decline of bed capacity due to a decline in facilities, or is it facilities themselves that are shutting down some of their wings. This matters because if the facilities still exist, it means that it's possible regions could see an increase in beds if needed.
+
+In order to figure out facilities that over skilled nursing beds, I'm going to filter for facilities that have a value greater than 0 in the following columns;
+
+* NH_Beds, or
+* NF2_Beds
+
+<br>
+
+```{r exploring facility data}
+snf.fac <- master.snf %>%
+  select(year, HFID, NAME, NH_BEDS, NF2_BEDS, COUNTY_NAME, countyfp, Dem_Desc, edr, planning.region) %>%
+  filter(NH_BEDS > 0 | NF2_BEDS > 0)
+
+head(snf.fac)
+
+names(snf.fac)
+
+```
+
+<br>
+
+The object snf.fac has `r comma(nrow(snf.fac))` rows. Each row is a unique HFID for each year that also has 1 or more skilled nursing beds.
+
+The charts below breakdown the number of facilities by region.
+
+In summary, they show that areas outside of the seven county metro are experiencing the largest percentage decline in the number of facilities that offer skilled nursing beds.
+
+<br>
+
+## Minnesota
+
+The number of facilities offering skilled nursing beds has declined in Minnesota from 415 in 2005 to 351 in 2024. This is a 15% decline.
+
+<br>
+
+```{r facilities mn, echo=FALSE}
+snf.fac.mn <- snf.fac %>%
+  group_by(year) %>%
+  summarize(n = n()) %>%
+  ungroup() %>%
+  mutate(pct.change = (n - n[year == min(year)]) / n[year == min(year)],
+         data_id = seq(n()))
+
+snf.fac.mn.plot <- ggplot(snf.fac.mn, aes(year, n)) +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste("Minnesota", "\nYear: ", year, "\nNumber of facilities: ", comma(n), "\nPercent change since 2005: ", percent(pct.change, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Number of facilities with skilled nursing beds", subtitle = "The number of facilities has decreased by 15% since 2005.")+
+  geom_label_repel(aes(label = comma(n)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::comma)+
+  scale_x_continuous(breaks = seq(1900, 2050, 5)) +
+  theme_line+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = snf.fac.mn.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+
+```
+
+<br>
+
+## Planning region
+
+Interestingly, the largest declines have occurred outside the seven county metro, except for Central. The larges decline has taken place in Northwest Minnesota with a decline of 22.1%, followed by Southweste with 20.3%.
+
+<br>
+
+```{r facilities pr, echo=FALSE}
+snf.fac.pr <- snf.fac %>%
+  group_by(planning.region, year) %>%
+  summarize(n = n()) %>%
+  ungroup() %>%
+  group_by(planning.region) %>%
+  mutate(pct.change = (n - n[year == min(year)]) / n[year == min(year)]) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+snf.fac.pr.plot <- ggplot(snf.fac.pr, aes(year, pct.change, color = planning.region)) +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nNumber of facilities: ", comma(n), "\nPercent change since 2005: ", percent(pct.change, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Number of facilities with skilled nursing beds", subtitle = "The largest percentage declines in the number of facilities has\ndecreased more severely in rural Minnesota.")+
+  geom_label_repel(data = filter(snf.fac.pr, year == max(year)), aes(label = percent(pct.change, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 5)) +
+  scale_color_manual(values = color.pr,
+                     guide = guide_legend(ncol = 3)) +
+  theme_line+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = snf.fac.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+
+```
+
+<br>
+
+## EDR
+
+The breakdown by EDR shows a mixed bag. It definitely shows that the most rural EDRs typically have the largest declines. For example, in the Central region, the largest declines have taken place in EDR 7E and EDR 6E, while EDR 7W which has St. Cloud has actually increased in the number of facilities. 
+
+Meanwhile, in Southwest MN the largest declines occurred in Southwest, and EDR 9 (which has Mankato) while EDR 6W has the smallest decline. Weird.
+
+Another thing worth mentioning is that both EDR 1 and 8, which are in the very corners of western Minnesota, have very significant declines. Could this be due to their proximity to North Dakota and South Dakota and their major cities?
+
+<br>
+
+```{r facilities edr, echo=FALSE}
+snf.fac.edr <- snf.fac %>%
+  group_by(edr, planning.region, year) %>%
+  summarize(n = n()) %>%
+  ungroup() %>%
+  group_by(edr) %>%
+  mutate(pct.change = (n - n[year == min(year)]) / n[year == min(year)]) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+snf.fac.edr.plot <- ggplot(snf.fac.edr, aes(year, pct.change, color = edr)) +
+  facet_wrap(~planning.region, ncol = 2) +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste(edr, "\nYear: ", year, "\nNumber of facilities: ", comma(n), "\nPercent change since 2005: ", percent(pct.change, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Number of facilities with skilled nursing beds", subtitle = "The largest percentage declines in the number of facilities has\ndecreased more severely in rural Minnesota.")+
+  geom_label_repel(data = filter(snf.fac.edr, year == max(year)), aes(label = percent(pct.change, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 5)) +
+  scale_color_manual(values = color.edr,
+                     guide = guide_legend(ncol = 2)) +
+  theme_line+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = snf.fac.edr.plot, width_svg = 7, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+
+```
+
+<br>
+
+## Counties
+
+<br>
+
+```{r facilities counties, echo=FALSE}
+snf.fac.county <- snf.fac %>%
+  group_by(COUNTY_NAME, countyfp, year) %>%
+  summarize(n = n()) %>%
+  ungroup() %>%
+  group_by(COUNTY_NAME, countyfp) %>%
+  mutate(pct.change = (n - n[year == min(year)]) / n[year == min(year)]) %>%
+  ungroup() %>%
+  group_by(COUNTY_NAME, countyfp) %>%
+  mutate(label = paste("Facilities 2005: ", n[year == min(year)], "\nFacilities 2024: ", n[year == max(year)], sep = "")) %>%
+  filter(year == max(year)) %>%
+  mutate(pct.change.bins = cut(pct.change,
+                               breaks = c(-1, -.5, -.25, -.0000000001, 0, 1),
+                               labels = c("-50% or greater", "-50% to -25%", "-25% to -1%", "No change", "Increase in number of facilities"))) %>%
+  left_join(mn_counties[,c(5,7)], by = "countyfp")
+
+
+snf.fac.county.plot <- ggplot(snf.fac.county) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = pct.change.bins, data_id = countyfp, tooltip = paste(COUNTY_NAME, "\n", label, "\nChange since 2005: ", percent(pct.change, accuracy = .1), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = c("#d73027", "#fc8d59", "#fee090", "white", "#91bfdb")) +
+  labs(title = "Change in number of facilities with skilled nursing beds",
+       subtitle = "The highest percentage of closures are occurring in rural Minnesota.") +
+  theme(legend.box.margin = margin(50, 0, 0, -100),
+        text = element_text(size = 15))
+
+
+
+girafe(ggobj = snf.fac.county.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>

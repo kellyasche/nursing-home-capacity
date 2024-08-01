@@ -1179,3 +1179,7 @@ girafe(ggobj = snf.fac.county.plot, width_svg = 7, height_svg = 7) %>%
 ```
 
 <br>
+
+So, the big question is whether the large declines in beds is due to facilities closing or due to facilities choosing to offer less beds, and whether geography/rurality matters.
+
+So how the heck do I do that? 

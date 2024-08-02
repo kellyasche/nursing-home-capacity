@@ -990,9 +990,11 @@ Okay, so let's load up the master data and see what we have here. The column "SW
 
 <br>
 
-# Facilities{.tabset}
+# Facilities
 
-Okay, next let's see if there are any changes to the number of facilities. Essentially, is the decline of bed capacity due to a decline in facilities, or is it facilities themselves that are shutting down some of their wings. This matters because if the facilities still exist, it means that it's possible regions could see an increase in beds if needed.
+Okay, next let's see if there are any changes to the number of facilities. Essentially, is the decline of bed capacity due to a decline in facilities, or is it facilities themselves that are shutting down some of their wings. This matters because if the facilities still exist, it means that it's possible regions could see an increase in beds if needed. Let's first focus on the decline in total facilities first.
+
+## Change in number of facilities{.tabset}
 
 In order to figure out facilities that over skilled nursing beds, I'm going to filter for facilities that have a value greater than 0 in the following columns;
 
@@ -1022,7 +1024,7 @@ In summary, they show that areas outside of the seven county metro are experienc
 
 <br>
 
-## Minnesota
+### Minnesota
 
 The number of facilities offering skilled nursing beds has declined in Minnesota from 415 in 2005 to 351 in 2024. This is a 15% decline.
 
@@ -1057,7 +1059,7 @@ girafe(ggobj = snf.fac.mn.plot, width_svg = 7, height_svg = 7) %>%
 
 <br>
 
-## Planning region
+### Planning region
 
 Interestingly, the largest declines have occurred outside the seven county metro, except for Central. The larges decline has taken place in Northwest Minnesota with a decline of 22.1%, followed by Southweste with 20.3%.
 
@@ -1096,7 +1098,7 @@ girafe(ggobj = snf.fac.pr.plot, width_svg = 7, height_svg = 7) %>%
 
 <br>
 
-## EDR
+### EDR
 
 The breakdown by EDR shows a mixed bag. It definitely shows that the most rural EDRs typically have the largest declines. For example, in the Central region, the largest declines have taken place in EDR 7E and EDR 6E, while EDR 7W which has St. Cloud has actually increased in the number of facilities. 
 
@@ -1140,7 +1142,7 @@ girafe(ggobj = snf.fac.edr.plot, width_svg = 7, height_svg = 10) %>%
 
 <br>
 
-## Counties
+### Counties
 
 <br>
 
@@ -1180,6 +1182,242 @@ girafe(ggobj = snf.fac.county.plot, width_svg = 7, height_svg = 7) %>%
 
 <br>
 
+## Bed declines: closure or shinkage{.tabset}
+
 So, the big question is whether the large declines in beds is due to facilities closing or due to facilities choosing to offer less beds, and whether geography/rurality matters.
 
-So how the heck do I do that? 
+So how the heck do I do that? I need to measure the number and percentage of bed declines into two categories - declines due to facilities that closed, and declines in facilities that are still open. 
+
+* New facility: beds in 2005 is NA and has value in 2024.
+* Shrink: Beds in 2005 greater than 0 and is greater than 2024 number of beds.
+* Closure: Beds in 2005 greater than 0 and is NA in 2024.
+
+<br>
+
+```{r bed change due to closures or shrinkage}
+fac.nh.nf2.beds.2005 <- snf.fac %>%
+  filter(year == min(year)) %>%
+  mutate(nh.nf2.beds.2005 = NH_BEDS + NF2_BEDS) %>%
+  select(HFID, NAME, nh.nf2.beds.2005, countyfp)
+
+fac.nh.nf2.beds.2024 <- snf.fac %>%
+  filter(year == max(year)) %>%
+  mutate(nh.nf2.beds.2024 = NH_BEDS + NF2_BEDS) %>%
+  select(HFID, NAME, nh.nf2.beds.2024, countyfp) 
+
+fac.nh.nf2.beds.2005.2024 <- fac.nh.nf2.beds.2005 %>%
+  full_join(fac.nh.nf2.beds.2024, by = c("HFID", "countyfp")) %>%
+  mutate(shrunk.closure = ifelse(nh.nf2.beds.2005 > nh.nf2.beds.2024, "Shrink", 99),
+         shrunk.closure = ifelse(nh.nf2.beds.2005 == nh.nf2.beds.2024, "No change", shrunk.closure),
+         shrunk.closure = ifelse(is.na(nh.nf2.beds.2005) & nh.nf2.beds.2024 > 0, "New facility", shrunk.closure),
+          shrunk.closure = ifelse(!is.na(nh.nf2.beds.2005) & nh.nf2.beds.2005 < nh.nf2.beds.2024, "Expansion", shrunk.closure),
+         shrunk.closure = ifelse(!is.na(nh.nf2.beds.2005) & nh.nf2.beds.2005 > 0 & is.na(nh.nf2.beds.2024), "Closure", shrunk.closure),
+         nh.nf2.beds.2005 = ifelse(is.na(nh.nf2.beds.2005), 0, nh.nf2.beds.2005),
+         nh.nf2.beds.2024 = ifelse(is.na(nh.nf2.beds.2024), 0, nh.nf2.beds.2024),
+         bed.change = nh.nf2.beds.2024 - nh.nf2.beds.2005) %>%
+  left_join(counties.regions, by = "countyfp")
+```
+
+<br>
+
+### Minnesota
+
+The chart below shows that 56% of the reduction in skilled nursing facilities is due to facilities shrinking the number of beds they have available. 44% of the reduction in beds is due to facilities closing.
+
+<br>
+
+```{r bed change due to closures or shrinkage MN, echo=FALSE}
+bed.change.shrink.mn <- fac.nh.nf2.beds.2005.2024 %>%
+  filter(shrunk.closure %in% c("Shrink", "Closure")) %>%
+  group_by(shrunk.closure) %>%
+  summarize(bed.change = sum(bed.change)) %>%
+  ungroup() %>%
+  mutate(pct = bed.change / sum(bed.change),
+         data_id = seq(n()))
+
+bed.change.shrink.mn.plot <- ggplot(bed.change.shrink.mn, aes(shrunk.closure, pct)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste("Minnesota", "\n2024", "\nBed reduction due to ", shrunk.closure, ": ", comma(bed.change), "\nPercent of total decline: ", percent(pct, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Percent share of bed reduction.", subtitle = "A large percentage of the reduction in skilled nursing beds is\nfrom facilities shrinking.")+
+  scale_y_continuous(labels=scales::percent)+
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = bed.change.shrink.mn.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### Planning Region
+
+Looking at the reductions due to closures and shrinkages by planning region, there are two outliers when compared to the statewide numbers. Northeast Minnesota has a significantly higher percentage of their reduction in beds being due to shrinkage (72%) while Southeast has a significantly higher percentage of reductions in beds due to factility closures (52%).
+
+<br>
+
+```{r bed change due to closures or shrinkage planning region, echo=FALSE}
+bed.change.shrink.pr <- fac.nh.nf2.beds.2005.2024 %>%
+  filter(shrunk.closure %in% c("Shrink", "Closure")) %>%
+  group_by(planning.region, shrunk.closure) %>%
+  summarize(bed.change = sum(bed.change)) %>%
+  ungroup() %>%
+  group_by(planning.region) %>%
+  mutate(pct = bed.change / sum(bed.change)) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+bed.change.shrink.pr.plot <- ggplot(bed.change.shrink.pr, aes(planning.region, pct, fill = shrunk.closure, group = shrunk.closure)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\n2024", "\nBed reduction due to ", shrunk.closure, ": ", comma(bed.change), "\nPercent of total decline: ", percent(pct, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Percent share of bed reduction.", subtitle = "A large percentage of the reduction in skilled nursing beds is\nfrom facilities shrinking.")+
+  scale_y_continuous(labels=scales::percent)+
+  scale_fill_manual(values = brewer.pal(n = 5, "RdYlBu"),
+                    guide = guide_legend(ncol = 2)) +
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = 1))
+
+
+girafe(ggobj = bed.change.shrink.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### EDR
+
+As we drill down to lower geographic areas, we do begin to see differences from the larger patterns.
+
+* Northwest: EDR 1 has significantly larger percentage of bed reductions due to facility closures while EDR 2 and 4 have a significantly higher percentage of reductions due to shrinkages.
+* Central:A large marjority of the reductions in EDR 6E are due to facility closures (66.4%). 100% of reductions in EDR 7W are due to shrinkages.
+* Southwest: EDR 8 has a significantly higher percentage of reductions due to facility closures while EDR 9 has a significantly higher percentage of reductions due to shrinkage.
+
+Overall, this is showing a bit more volatility in the rural regions.
+
+<br>
+
+```{r bed change due to closures or shrinkage edr, echo=FALSE}
+bed.change.shrink.edr <- fac.nh.nf2.beds.2005.2024 %>%
+  filter(shrunk.closure %in% c("Shrink", "Closure")) %>%
+  group_by(edr, planning.region, shrunk.closure) %>%
+  summarize(bed.change = sum(bed.change)) %>%
+  ungroup() %>%
+  group_by(edr, planning.region) %>%
+  mutate(pct = bed.change / sum(bed.change)) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()),
+         edr = str_sub(edr, 1, 6),
+         edr = trimws(edr, which = "both"))
+
+bed.change.shrink.edr.plot <- ggplot(bed.change.shrink.edr, aes(edr, pct, fill = shrunk.closure, group = shrunk.closure)) +
+  facet_wrap(~planning.region, ncol = 2, scales = "free_x") +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(edr, "\n2024", "\nBed reduction due to ", shrunk.closure, ": ", comma(bed.change), "\nPercent of total decline: ", percent(pct, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Percent share of bed reduction.", subtitle = "There is more variance in reduction due to closure or\nshrinkage at a lower geographic level.")+
+  scale_y_continuous(labels=scales::percent)+
+  scale_fill_manual(values = brewer.pal(n = 5, "RdYlBu"),
+                    guide = guide_legend(ncol = 2)) +
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = 1))
+
+
+girafe(ggobj = bed.change.shrink.edr.plot, width_svg = 7, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### RUCA
+
+Okay, this is getting interesting. This definitely shows that entirely rural counties are experiencing reductions in beds due to facility closures are a much higher rate than other county types.
+
+<br>
+
+```{r bed change due to closures or shrinkage ruca, echo=FALSE}
+bed.change.shrink.ruca <- fac.nh.nf2.beds.2005.2024 %>%
+  filter(shrunk.closure %in% c("Shrink", "Closure")) %>%
+  group_by(Dem_Desc, shrunk.closure) %>%
+  summarize(bed.change = sum(bed.change)) %>%
+  ungroup() %>%
+  group_by(Dem_Desc) %>%
+  mutate(pct = bed.change / sum(bed.change)) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+bed.change.shrink.ruca.plot <- ggplot(bed.change.shrink.ruca, aes(Dem_Desc, pct, fill = shrunk.closure, group = shrunk.closure)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(Dem_Desc, "\n2024", "\nBed reduction due to ", shrunk.closure, ": ", comma(bed.change), "\nPercent of total decline: ", percent(pct, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Percent share of bed reduction.", subtitle = "Entirely rural counties have a significantly higher percentage\nof reductions in beds due to facility closures.")+
+  scale_y_continuous(labels=scales::percent)+
+  scale_fill_manual(values = brewer.pal(n = 5, "RdYlBu"),
+                    guide = guide_legend(ncol = 2)) +
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = 1))
+
+
+girafe(ggobj = bed.change.shrink.ruca.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+
+<br>
+
+### Counties
+
+The maps below that there is definitely a larger share of bed reductions occurring due to closures in Northwest
+
+<br>
+
+```{r bed change due to closures or shrinkage counties, echo=FALSE}
+bed.change.shrink.county <- fac.nh.nf2.beds.2005.2024 %>%
+  filter(shrunk.closure %in% c("Shrink", "Closure")) %>%
+  group_by(Name, countyfp, shrunk.closure) %>%
+  summarize(bed.change = sum(bed.change)) %>%
+  ungroup()  %>%
+  complete(Name, shrunk.closure) %>%
+  group_by(Name) %>%
+  fill(countyfp, .direction = "downup") %>%
+  ungroup() %>%
+  mutate(bed.change = ifelse(is.na(bed.change), 0, bed.change)) %>%
+  group_by(Name, countyfp) %>%
+  mutate(pct = bed.change / sum(bed.change, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(pct = ifelse(is.nan(pct), 0, pct),
+         data_id = seq(n()),
+         pct.bins = cut(pct,
+                        breaks = c(-1, .0000000001, .25, .5, .75, .99999999, 1.2),
+                        labels = c("0%", "1%-25%", "25%-50%", "50%-75%", "75%-99%", "100%"))) %>%
+  right_join(mn_counties[,c(5,7)], by = "countyfp")
+
+bed.change.shrink.county.plot <- ggplot(bed.change.shrink.county) +
+  facet_wrap(~shrunk.closure, ncol = 2) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = pct.bins, data_id = data_id, tooltip = paste(Name, "\n2024", "\nBed reductions due to ", shrunk.closure, ": ", comma(bed.change), "\nPercent of total bed reductions: ", percent(pct, accuracy = .1), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = brewer.pal(n = 7, "PuBu")) +
+  labs(title = "Percent share of bed reductions") +
+  theme(legend.box.margin = margin(50, 0, 0, -50),
+        text = element_text(size = 18))
+
+
+girafe(ggobj = bed.change.shrink.county.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>

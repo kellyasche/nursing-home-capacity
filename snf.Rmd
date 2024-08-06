@@ -1262,9 +1262,58 @@ girafe(ggobj = fac.groups.mn.plot, width_svg = 10, height_svg = 10) %>%
 
 ### Planning Region
 
-The regions outside of the seven county metro and Southeast have a significantly larger percentage of facilities that have shrunk the number of beds offered rather than complete closure. However, the also had significantly higher percentage of facilities that have closed. 
+There is quite a bit of nuance in these numbers. But we can kind of group the planning regions into a couple of different categories;
 
-The seven county metro has significantly higher percentages of facilitie sthat have expanded or are new facilities.
+1. Shrinkage and closures: The Southwest, Northwest and Northeast regions have the highest percetnage of facilities that are closing or shrinking the number of beds they offer while also have the lowest percentage of facilities that didn't change, are expanding, or new facilities.
+2. Closing or no change: The Southeast region has the lowest percentage of facilities that are shrinking the number of beds they have available, however they have one of the highest percentages of facilities closing as well as a significantly higher percentage of facilities that offer the same beds in 2005 than in 2024. 
+3. Shrinking or expanding: the Central region has one of the highest percentages of facilities shrinking the number of beds they offer, while also have one of the highest percentages of facilities that have more beds available in 2024 than in 2005.
+4. Closing and opening facilities: the seven county metro has some of the lowest percentages of facilities that are shrinking, but has a higher percentage of facilities that have closed while also having the highest percentage of facilities that are new.
+
+
+**Closures**
+
+We might have expected that there the decline in snf beds is due to facilities closing at a higher rate than in rural areas compared to the seven county metro. This chart shows that to be kind of true. Southwest and Northwest have very similar percentage of closures, while Northeast and Central have the lowest.
+
+1. Southwest - 24.4%
+2. Northwest - 24.1%
+3. Southeast - 21.8%
+4. Seven County Metro - 20.3%
+5. Northeast - 16.2%
+6. Central - 12.0%
+
+**Shrinkage**
+
+Bed reduction due to facilities shrinking the number of beds they have available was, obviously, the largest percentage for each region. However, there is considerable variance. The highest rate is in Northeast and Central while the two lowest, by a significant margin, is Southeast and seven county metro.
+
+1. Northeast - 75.7%
+2. Central - 70.0%
+3. Northwest - 67.1%
+4. Southwest - 64.1%
+5. Seven County Metro - 52.4%
+6. Southeast - 49.1%
+
+**No change**
+
+The percentage of facilities that didn't change the number of beds they have available since 2005 is significantly higher in Southeast than the rest of the regions. By 2024, 18.2% of the SNF facilities in Southeast had the same number of beds available than in 2005. The next closest was the seven county metro with nearly 10%. Northeast had the lowest with 2.7%
+
+1. Southeast - 18.2%
+2. Seven County metro - 9.8%
+3. Central - 8%
+4. Southwest - 6.4%
+5. Northwest - 5.1%
+6. Northeast - 2.7%
+
+**Expansion**
+
+The percentage of facilities that have a larger number of beds available in 2024 than in 2005 was highest in the seven county metro, Central and Southeast. 
+
+**New facility**
+
+10.5% of facilities in the seven county metro are new from 2005. The rest of the regions are half that or less.
+
+
+
+
 
 <br>
 

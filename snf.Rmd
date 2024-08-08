@@ -1206,7 +1206,8 @@ fac.groups.2005.2024 <- fac.groups.2005 %>%
          shrunk.closure = ifelse(!is.na(nh.nf2.beds.2005) & nh.nf2.beds.2005 > 0 & is.na(nh.nf2.beds.2024), "Closure", shrunk.closure),
          nh.nf2.beds.2005 = ifelse(is.na(nh.nf2.beds.2005), 0, nh.nf2.beds.2005),
          nh.nf2.beds.2024 = ifelse(is.na(nh.nf2.beds.2024), 0, nh.nf2.beds.2024),
-         bed.change = nh.nf2.beds.2024 - nh.nf2.beds.2005) %>%
+         bed.change = nh.nf2.beds.2024 - nh.nf2.beds.2005,
+         group = ifelse(shrunk.closure %in% c("Closure", "Shrink"), "Shrinking or closed", "Expanding, new facilities, no change")) %>%
   left_join(counties.regions, by = "countyfp")
 
 head(fac.groups.2005.2024)
@@ -1217,12 +1218,15 @@ names(fac.groups.2005.2024)
 
 <br>
 
-Below are charts indicated the percentage of facilities that fall into the following categories;
+Below are charts indicated the percentage of facilities that fall into the following categories with sub-groups;
 
-* New facility: facilities that didn't exist in 2005 but do in 2024 and offer skilled nursing beds.
-* Expansion: facilities that offer more skilled nursing  beds in 2024 than in 2005.
-* Closure: facilities that offered skilled nursing facilities in 2005 but no longer exist in 2024.
-* Shrink: facilities that have less beds offered in 2024 than in 2005.
+* Shrinking or closing: facilities that are either;
+  + shrinking - offer less beds in 2024 than in 2005, or
+  + closing - the facilities has closed since 2005.
+* Expanding, new facilities, or no change: facilities that are either;
+  + expanding - offer more beds in 2024 than in 2005,
+  + new facilities - the facility did not exist in 2005, or
+  + no change - offers the same number of beds in 2024 as in 2005.
 
 <br>
 
@@ -1234,24 +1238,34 @@ Nearly 61% of the skilled nursing facilities in 2024 has shrunk the number of be
 
 ```{r fac groups mn, echo=FALSE}
 fac.groups.mn <- fac.groups.2005.2024 %>%
-  group_by(shrunk.closure) %>%
+  group_by(group, shrunk.closure) %>%
   summarize(n = n()) %>%
   ungroup() %>%
-  mutate(pct = n / sum(n),
+  mutate(shrunk.closure.pct = n / sum(n)) %>%
+  group_by(group) %>%
+  mutate(n.group = sum(n)) %>%
+  ungroup() %>%
+  mutate(group.pct = n.group / sum(n),
          data_id = seq(n()),
-         shrunk.closure = fct_reorder(shrunk.closure, -n)) 
+         group = fct_relevel(group, "Shrinking or closed", "Expanding, new facilities, no change")) %>%
+  arrange(desc(group)) %>%
+  group_by(group) %>%
+  mutate(shrunk.closure.rolling.sum = cumsum(shrunk.closure.pct)) %>%
+  ungroup()
 
-fac.groups.mn.plot <- ggplot(fac.groups.mn, aes(shrunk.closure, pct)) +
-  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste("Minnesota", "\n2024", "\nFacility group change sine 2005: ", shrunk.closure, "\nNumber of facilities changed since 2005: ", comma(n), "\nPercentage of facilities changed since 2005: ", percent(pct, accuracy = .1), sep = ""))) +
-  geom_label(aes(label = percent(pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+fac.groups.mn.plot <- ggplot(fac.groups.mn, aes(group, shrunk.closure.pct, fill = shrunk.closure, group = shrunk.closure)) +
+  geom_col_interactive(position = "stack", aes(data_id = data_id, tooltip = paste("Minnesota", "\n2024", "\nFacility group change sine 2005: ", group, "\nType of change: ", shrunk.closure, "\nNumber of facilities changed since 2005: ", comma(n), "\nPercentage of facilities changed since 2005: ", percent(group.pct, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(shrunk.closure.pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_stack(vjust = .5)) +
   labs(x="", y = "", color="", title = "Percent of skilled nursing facilities by change in beds")+
+  geom_label(aes(y = group.pct, label = percent(group.pct, accuracy = .1)), show.legend = FALSE, color = "black", fill = "white") +
   scale_y_continuous(labels=scales::percent)+
+  scale_fill_manual(values = brewer.pal(n = 6, "RdYlBu")) +
   theme_bar+
   theme(legend.position = "bottom",
         text = element_text(size = 18))
 
 
-girafe(ggobj = fac.groups.mn.plot, width_svg = 10, height_svg = 10) %>%
+girafe(ggobj = fac.groups.mn.plot, width_svg = 7, height_svg = 7) %>%
   girafe_options(opts_selection(type = "none"),
                  opts_sizing(rescale = FALSE))      
 
@@ -1262,56 +1276,9 @@ girafe(ggobj = fac.groups.mn.plot, width_svg = 10, height_svg = 10) %>%
 
 ### Planning Region
 
-There is quite a bit of nuance in these numbers. But we can kind of group the planning regions into a couple of different categories;
+The chart below shows that the our most rural areas of Minnesota have the highest percentage of facilities that are either shrinking the number of beds they have or are closing. Northwest, Northeast, and Southwest each have percentages near or over 90%. 
 
-1. Shrinkage and closures: The Southwest, Northwest and Northeast regions have the highest percetnage of facilities that are closing or shrinking the number of beds they offer while also have the lowest percentage of facilities that didn't change, are expanding, or new facilities.
-2. Closing or no change: The Southeast region has the lowest percentage of facilities that are shrinking the number of beds they have available, however they have one of the highest percentages of facilities closing as well as a significantly higher percentage of facilities that offer the same beds in 2005 than in 2024. 
-3. Shrinking or expanding: the Central region has one of the highest percentages of facilities shrinking the number of beds they offer, while also have one of the highest percentages of facilities that have more beds available in 2024 than in 2005.
-4. Closing and opening facilities: the seven county metro has some of the lowest percentages of facilities that are shrinking, but has a higher percentage of facilities that have closed while also having the highest percentage of facilities that are new.
-
-
-**Closures**
-
-We might have expected that there the decline in snf beds is due to facilities closing at a higher rate than in rural areas compared to the seven county metro. This chart shows that to be kind of true. Southwest and Northwest have very similar percentage of closures, while Northeast and Central have the lowest.
-
-1. Southwest - 24.4%
-2. Northwest - 24.1%
-3. Southeast - 21.8%
-4. Seven County Metro - 20.3%
-5. Northeast - 16.2%
-6. Central - 12.0%
-
-**Shrinkage**
-
-Bed reduction due to facilities shrinking the number of beds they have available was, obviously, the largest percentage for each region. However, there is considerable variance. The highest rate is in Northeast and Central while the two lowest, by a significant margin, is Southeast and seven county metro.
-
-1. Northeast - 75.7%
-2. Central - 70.0%
-3. Northwest - 67.1%
-4. Southwest - 64.1%
-5. Seven County Metro - 52.4%
-6. Southeast - 49.1%
-
-**No change**
-
-The percentage of facilities that didn't change the number of beds they have available since 2005 is significantly higher in Southeast than the rest of the regions. By 2024, 18.2% of the SNF facilities in Southeast had the same number of beds available than in 2005. The next closest was the seven county metro with nearly 10%. Northeast had the lowest with 2.7%
-
-1. Southeast - 18.2%
-2. Seven County metro - 9.8%
-3. Central - 8%
-4. Southwest - 6.4%
-5. Northwest - 5.1%
-6. Northeast - 2.7%
-
-**Expansion**
-
-The percentage of facilities that have a larger number of beds available in 2024 than in 2005 was highest in the seven county metro, Central and Southeast. 
-
-**New facility**
-
-10.5% of facilities in the seven county metro are new from 2005. The rest of the regions are half that or less.
-
-
+Central, Seven county metro, and southeast have highest percentages of facilities that are either expanding or has no change. 
 
 
 
@@ -1319,28 +1286,40 @@ The percentage of facilities that have a larger number of beds available in 2024
 
 ```{r fac groups pr, echo=FALSE}
 fac.groups.pr <- fac.groups.2005.2024 %>%
-  group_by(planning.region, shrunk.closure) %>%
+  group_by(planning.region, group, shrunk.closure) %>%
   summarize(n = n()) %>%
   ungroup() %>%
   group_by(planning.region) %>%
-  mutate(pct = n / sum(n)) %>%
+  mutate(shrunk.closure.pct = n / sum(n)) %>%
+  ungroup() %>%
+  group_by(planning.region, group) %>%
+  mutate(n.group = sum(n)) %>%
+  ungroup() %>%
+  group_by(planning.region) %>%
+  mutate(group.pct = n.group / sum(n)) %>%
   ungroup() %>%
   mutate(data_id = seq(n()),
-         shrunk.closure = fct_reorder(shrunk.closure, -n)) 
+         group = fct_relevel(group, "Shrinking or closed", "Expanding, new facilities, no change")) %>%
+  arrange(desc(group)) %>%
+  group_by(planning.region, group) %>%
+  mutate(shrunk.closure.rolling.sum = cumsum(shrunk.closure.pct)) %>%
+  ungroup()
 
-fac.groups.pr.plot <- ggplot(fac.groups.pr, aes(shrunk.closure, pct, fill = planning.region, group = planning.region)) +
-  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\n2024", "\nFacility group change sine 2005: ", shrunk.closure, "\nNumber of facilities changed since 2005: ", comma(n), "\nPercentage of facilities changed since 2005: ", percent(pct, accuracy = .1), sep = ""))) +
-  geom_label(aes(label = percent(pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+fac.groups.pr.plot <- ggplot(fac.groups.pr, aes(planning.region, shrunk.closure.pct, fill = shrunk.closure, group = shrunk.closure)) +
+  facet_wrap(~group, ncol = 2) +
+  geom_col_interactive(position = "stack", aes(data_id = data_id, tooltip = paste("Minnesota", "\n2024", "\nFacility group change sine 2005: ", group, "\nType of change: ", shrunk.closure, "\nNumber of facilities changed since 2005: ", comma(n), "\nPercentage of facilities changed since 2005: ", percent(group.pct, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(shrunk.closure.pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_stack(vjust = .5)) +
   labs(x="", y = "", color="", title = "Percent of skilled nursing facilities by change in beds")+
+  geom_label(aes(y = group.pct, label = percent(group.pct, accuracy = .1)), show.legend = FALSE, color = "black", fill = "white") +
   scale_y_continuous(labels=scales::percent)+
-  scale_fill_manual(values = color.pr) +
+  scale_fill_manual(values = brewer.pal(n = 6, "RdYlBu")) +
   theme_bar+
   theme(legend.position = "bottom",
         text = element_text(size = 18),
         axis.text.x = element_text(angle = 25, hjust = .9))
 
 
-girafe(ggobj = fac.groups.pr.plot, width_svg = 8, height_svg = 7) %>%
+girafe(ggobj = fac.groups.pr.plot, width_svg = 8, height_svg = 10) %>%
   girafe_options(opts_selection(type = "none"),
                  opts_sizing(rescale = FALSE))      
 
@@ -1355,24 +1334,34 @@ girafe(ggobj = fac.groups.pr.plot, width_svg = 8, height_svg = 7) %>%
 
 ```{r fac groups edr, echo=FALSE}
 fac.groups.edr <- fac.groups.2005.2024 %>%
-  group_by(edr, planning.region, shrunk.closure) %>%
+  group_by(edr, planning.region, group, shrunk.closure) %>%
   summarize(n = n()) %>%
   ungroup() %>%
   group_by(edr, planning.region) %>%
-  mutate(pct = n / sum(n)) %>%
+  mutate(shrunk.closure.pct = n / sum(n)) %>%
+  ungroup() %>%
+  group_by(edr, planning.region, group) %>%
+  mutate(n.group = sum(n)) %>%
+  ungroup() %>%
+  group_by(edr, planning.region) %>%
+  mutate(group.pct = n.group / sum(n)) %>%
   ungroup() %>%
   mutate(data_id = seq(n()),
-         shrunk.closure = fct_reorder(shrunk.closure, -n),
-         edr = str_sub(edr, 1, 6),
-         edr = trimws(edr, which = "both")) 
+         group = fct_relevel(group, "Shrinking or closed", "Expanding, new facilities, no change")) %>%
+  arrange(desc(group)) %>%
+  group_by(edr, planning.region, group) %>%
+  mutate(shrunk.closure.rolling.sum = cumsum(shrunk.closure.pct)) %>%
+  ungroup()
 
-fac.groups.edr.plot <- ggplot(fac.groups.edr, aes(edr, pct, fill = shrunk.closure, group = shrunk.closure)) +
-  facet_wrap(~planning.region, ncol = 2, scales = "free_x") +
-  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(edr, "\n2024", "\nFacility group change sine 2005: ", shrunk.closure, "\nNumber of facilities changed since 2005: ", comma(n), "\nPercentage of facilities changed since 2005: ", percent(pct, accuracy = .1), sep = ""))) +
-  geom_label(aes(label = percent(pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_dodge(width = .9)) +
+fac.groups.edr.plot <- ggplot(fac.groups.edr, aes(edr, shrunk.closure.pct, fill = shrunk.closure, group = shrunk.closure, color = planning.region)) +
+  facet_wrap(~group, ncol = 1, scales = "free_y") +
+  geom_col_interactive(position = "stack", aes(data_id = data_id, tooltip = paste(edr, "\n2024", "\nFacility group change sine 2005: ", group, "\nType of change: ", shrunk.closure, "\nNumber of facilities changed since 2005: ", comma(n), "\nPercentage of facilities changed since 2005: ", percent(group.pct, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(shrunk.closure.pct, accuracy = .1)), show.legend = FALSE, color = "black", size = 5, position = position_stack(vjust = .5)) +
   labs(x="", y = "", color="", title = "Percent of skilled nursing facilities by change in beds")+
+  geom_label(aes(y = group.pct, label = percent(group.pct, accuracy = .1)), show.legend = FALSE, color = "black", fill = "white") +
   scale_y_continuous(labels=scales::percent)+
   scale_fill_manual(values = brewer.pal(n = 6, "RdYlBu")) +
+  scale_color_manual(values = color.pr) +
   theme_bar+
   theme(legend.position = "bottom",
         text = element_text(size = 18),
@@ -1424,11 +1413,9 @@ girafe(ggobj = fac.groups.ruca.plot, width_svg = 8, height_svg = 7) %>%
 
 <br>
 
-### Counties
+Instead of breaking it up like this, I think it might be easier to summarize if I split facilities into two groups;
 
-<br>
-
-<br>
+1. Shrinking or closing: Facilities that have either reduced
 
 ## Bed declines: closure or shinkage{.tabset}
 

@@ -85,4 +85,16 @@ Assisted living residents usually live in their own apartments or rooms and shar
 Most people pay the full costs of assisted living themselves. This option tends to be more expensive than living independently but less expensive than a nursing home. Medicare does not pay for assisted living. Medicaid may provide coverage for some aspects of assisted living, depending on the state and whether the person is eligible. This care option is partially covered by some long-term care insurance policies.
 
 
+# Summary
+
+Bed capacity across Minnesota has been declining since 2005. Overall, bed capacity has declined 33% from 2005 to 2024. The most severe declines have occurred in rural counties - Cass (-93%), Grant (-65%), Swift (-69%), Pine (-65%), and Faribault (-63%). By region, the largest declines have occurred in Northwest (-43%), Southwest (-38%), Southeast (33%), Northeast (-31%), Seven County Metro (-30%) and Central (-25%).
+
+When looking at bed capacity as a per capita (age 65+) value, this has increased from having 20 people age 65+ per skilled nursing facility bed in 2005 to 49 people age 65+ per skilled nursing facility bed in Minnesota. The most severe per capita values are located in North Central Minnesota - Pine: 1,387 per bed, Cass: 271 per bed, Hubbarb: 114 per bed, and Crow Wing with 103 per bed. A few of the suburbs also had higher per capita values - Anoka: 148 per bed, Carver: 104 per bed, Dakota: 89 per bed and Washington with 80 per bed.
+
+Interestingly, at a rural-urban basis, the more urban a county group was the higher the per capita of 65+ per bed capacity was - Entirely urban was 60 people per bed and it shrinks to 23 people per bed for our entirely rural county group.
+
+Although it would seem that rural areas might be better off in terms of bed availability, one large concern is the amount of beds that are missing due to facility closures rather than currently operating facilities that have chosen to shrink their bed capacity. A higher percentage of facility closures tracks with how rural a county is - entirely rural counties have lost 26% of their facilities, town/rural mix counties have lost 21%, urban/town/rural county mix has lost 16% while entirely urban counties have lost only 9%.
+
+What this means for rural areas is that there is possibly less flexibility in expanding bed availability if demand increases. For our entirely rural counties, 58% of the decline in bed capacity is from facility closure. This is an economy of scale issue.
+
 

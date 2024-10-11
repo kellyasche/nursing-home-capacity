@@ -155,6 +155,35 @@ mn_counties <- st_read("/Users/kellyasche/Library/CloudStorage/GoogleDrive-kasch
 * Counties in the central lakes region have extremely high ratios - Cass, Pine, Hubbard, and Crow Wing.
 * Surprisingly, our entirely rural counties have the lowest number of individuals 65+ per bed with 23, The highest is in our entirely urban counties.
 
+**Medicare vs. Medicaid beds**
+
+The breakdowns showed that nearly the entire state has 100% of their beds as dual eligible. Roseau County is an outlier, however, for rural Minnesota.
+
+
+**Swing beds**
+
+## Facilities
+
+**Change in facilities**
+
+Although the metro is experiencing a larger decline in beds, rural Minnesota is experiencing a larger percentage of facilities closing. Northwest has experienced a 22% decline in facilities since 2005. This is followed by Southwest with 20%, Southeast a 17%, Northeast a 14%, Seven County metro at 11% and Central with a 8% decline. If looked at by rural-urban-ness, the more rural a county is the more likely it has experienced higher percentages of facility closures than urban counties. In our entirely rural counties, 26% of their facilities have closed since 2005, compared to 21% in town/rural mix counties, 16% in urban/town/rural mix counties and only 9% in our entirely urban counties.
+
+**Facility expansion, shrinkage or closure**
+
+Overall, a majority of facilities are experiencing shrinkage in their bed capacity. Between 2005 and 2024, 61% have less capacity, 21% of facilities closed, 8.6% of facilities didn't shrink or grow, 6% are new facilities, and 4% expanded their bed capacity.
+
+* Shrinkage or closures: Southwest, Northwest and Northeast are all regions experiencing high percentage of facilities that have closed or are shrinking their bed capacity.
+* Closing or no change: Southeast is experiencing a higher percentage of closing facilities and facilities that have changed.
+* Shrinking or expanding: Central is experiencing both shrinking in bed capacity among older facilities while also having facilities expanding the beds they offer.
+* Closing and opening: The seven county metro has oneo f the lowetst percentages of facilities that are shrinking, but also have a higher percentage that have closed and are brand new.
+
+**Bed declines: shrinkage or closure**
+
+Our entirely rural counties have a significantly higher percentage of their decline in bed capacity due to facility closure rather than shrinkage - 58% closure vs 42% due to shrinkage. The percentages for the other county groups are flipped. 
+
+
+
+
 <br>
 
 
@@ -534,7 +563,7 @@ nh.nf2.beds.age.65plus.county <- nh.nf2.beds.master %>%
   filter(!is.na(countyfp)) %>%
   group_by(year, countyfp, COUNTY_NAME) %>%
   summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
-  ungroup() 
+  ungroup() %>%
   group_by(countyfp, COUNTY_NAME) %>%
   arrange(year) %>%
   mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%
@@ -1044,26 +1073,6 @@ girafe(ggobj = non.dual.counties.plot, width_svg = 7, height_svg = 7) %>%
 
 ```
 
-<br>
-
-## Swing beds{.tabset}
-
-One other aspect worth exploring is the trends in the number of swing beds available in rural Minnesota. 
-
-A swing bed is a service that rural hospitals and critical access hospitals (CAHs) with a Medicare provider agreement provide that allows a patient to transition from acute care to skilled nursing facility (SNF) care without leaving the hospital. This allows a patient to continue receiving services in the hospital even though acute care is no longer required.
-
-State law allows Minnesota Health Care Programs (MHCP) payments for swing bed services provided by a designated licensed hospital, if the hospital meets the following criteria:
-
-* The hospital is the sole community provider, or is a public hospital owned by a government entity with 15 or fewer acute care beds
-* The MHCP member requires skilled nursing care per Medicaid guidelines
-* A nursing home bed is not available within 25 miles of the facility
-* The member is transferred from an acute care hospital bed and acute care is no longer needed
-* The member must receive a preadmission screening before placement as specified in the Preadmission Screening section of this manual section.
-
-Okay, so let's load up the master data and see what we have here. The column "SWING" identifies whether the facility has a medicare certified swing bed. So let's filter out everything so we only have those facilities.
-
-<br>
-
 # Facilities
 
 Okay, next let's see if there are any changes to the number of facilities. Essentially, is the decline of bed capacity due to a decline in facilities, or is it facilities themselves that are shutting down some of their wings. This matters because if the facilities still exist, it means that it's possible regions could see an increase in beds if needed. Let's first focus on the decline in total facilities first.
@@ -1251,6 +1260,50 @@ snf.fac.county.plot <- ggplot(snf.fac.county) +
 girafe(ggobj = snf.fac.county.plot, width_svg = 7, height_svg = 7) %>%
   girafe_options(opts_selection(type = "none"),
                  opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### RUCA
+
+The number of skilled nursing homes has declined signifiacntly in our entirely rural counties compared to the other county groups. 
+
+<br>
+
+```{r facilities ruca, echo=FALSE}
+snf.fac.ruca <- snf.fac %>%
+  group_by(Dem_Desc, year) %>%
+  summarize(n = n()) %>%
+  ungroup() %>%
+  group_by(Dem_Desc) %>%
+  mutate(pct.change = (n - n[year == min(year)]) / n[year == min(year)]) %>%
+  ungroup() %>%
+  group_by(Dem_Desc) %>%
+  mutate(label = paste("Facilities 2005: ", n[year == min(year)], "\nFacilities 2024: ", n[year == max(year)], sep = "")) %>%
+  mutate(data_id = seq(n()))
+
+snf.fac.ruca.plot <- ggplot(snf.fac.ruca, aes(year, pct.change, color = Dem_Desc)) +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste(Dem_Desc, "\nYear: ", year, "\nNumber of facilities: ", comma(n), "\nPercent change since 2005: ", percent(pct.change, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Number of facilities with skilled nursing beds", subtitle = "The largest percentage declines in the number of facilities has\ndecreased more severely in rural Minnesota.")+
+  geom_label_repel(data = filter(snf.fac.ruca, year == max(year)), aes(label = percent(pct.change, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 5)) +
+  scale_color_manual(values = color.ruca,
+                     guide = guide_legend(ncol = 2)) +
+  theme_line+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = snf.fac.ruca.plot, width_svg = 7, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+
+
+  
 
 ```
 

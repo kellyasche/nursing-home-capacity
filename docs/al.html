@@ -11,7 +11,7 @@
 
 
 
-<title>Summary</title>
+<title>Assisted Living</title>
 
 <script src="site_libs/header-attrs-2.27/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -29,6 +29,9 @@
        h6 {font-size: 12px;}
        code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
        pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
@@ -222,6 +225,69 @@ $(document).ready(function () {
 
 
 
+<style type="text/css">
+
+#section-TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#section-TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
 
 </head>
 
@@ -229,6 +295,16 @@ $(document).ready(function () {
 
 
 <div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="section-TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
 
 
 
@@ -277,146 +353,17 @@ $(document).ready(function () {
 
 
 
-<h1 class="title toc-ignore">Summary</h1>
+<h1 class="title toc-ignore">Assisted Living</h1>
 
 </div>
 
 
-<div id="section-research-question" class="section level1">
-<h1>Research question</h1>
-<p>There are five primary drivers in the increase in assisted living and
-residential care market;</p>
-<ol style="list-style-type: decimal">
-<li>Federal and state efforts to move individuals from institutional to
-noninstitutional or community-based settings.</li>
-<li>Advances in medical care and technology have altered both demand and
-need for institutional care.</li>
-<li>There is a consumer preference shift for more independent
-living.</li>
-<li>Assisted living is perceived more positively compared to nursing
-homes.</li>
-<li>Assisted living communities are less costly.</li>
-</ol>
 <p><br></p>
-</div>
-<div id="section-exploration-of-data" class="section level1">
-<h1>Exploration of data</h1>
-<p>Due to these facts, it would seem necessary to highlight the trends
-in these types of institutions - non-institutional and institutional
-care;</p>
-<ul>
-<li>Where are they located?</li>
-<li>What is their capacity?</li>
-</ul>
-<p>The following is a list of characteristics/attributes that we would
-like to explore in the data;</p>
-<p>Profile of institutional and non-institutional settings for each
-region of Minnesota</p>
-<ul>
-<li>Nursing homes
-<ul>
-<li>Private vs. non-profit</li>
-<li>Bed availability</li>
-<li>Reasons for declines in availability - financial vs. workforce
-shortages</li>
-<li>Staffing</li>
-<li>Projected demand</li>
-</ul></li>
-<li>Assisted living facilities
-<ul>
-<li>Private vs. non-profit</li>
-<li>Trends in capacity</li>
-<li>Services offered</li>
-<li>Staffing</li>
-</ul></li>
-</ul>
-</div>
-<div id="section-terminology" class="section level1">
-<h1>Terminology</h1>
-<p><em>Board and care homes</em> These small private facilities, also
-called residential care facilities or group homes, usually have 20 or
-fewer residents. Rooms may be private or shared. Residents receive
-personal care and meals, and staff are available around the clock.
-Nursing and medical care usually are not provided at the home.</p>
-<p>In most cases, you must pay the costs of living at a board and care
-home. Medicare does not cover these costs. Medicaid may provide partial
-coverage, depending on the state and whether the person is eligible. If
-the older person has long-term care insurance, check their plan to see
-if it includes coverage for this type of facility.</p>
-<p><em>Nursing homes</em> Nursing homes, also called skilled nursing
-facilities, provide a wide range of health and personal care services.
-Their services focus more on medical care than most assisted living
-facilities or board and care homes. Services offered in a nursing home
-typically include nursing care, 24-hour supervision, three meals a day,
-and assistance with everyday activities. Rehabilitation services, such
-as physical, occupational, and speech therapy, are also available.</p>
-<p>In many cases, people must pay for nursing home care themselves.
-Medicare generally doesn’t cover long-term stays in a nursing home, but
-it may pay for some related costs, such as doctor services and medical
-supplies. Medicaid may also cover some of the costs of nursing homes for
-people who are eligible based on income and personal resources. If the
-older person has long-term care insurance, the policy may include some
-coverage for nursing home care. Check with the insurance company for
-details.</p>
-<p><em>Assisted living</em> Assisted living is for people who need help
-with daily care, but not as much help as a nursing home provides.
-Assisted living facilities range in size from as few as 25 residents to
-100 or more. Typically, a few levels of care are offered, and residents
-pay more if they need extra services or special care.</p>
-<p>Assisted living residents usually live in their own apartments or
-rooms and share common areas. They have access to many services,
-including up to three meals a day; assistance with personal care; help
-with medications, housekeeping, and laundry; 24-hour supervision,
-security, and on-site staff; and social and recreational activities.
-Some assisted living facilities are part of a larger organization that
-also offers other levels of care. For example, continuing care
-retirement communities may also offer independent living and skilled
-nursing care. Exact arrangements vary by facility and by state.</p>
-<p>Most people pay the full costs of assisted living themselves. This
-option tends to be more expensive than living independently but less
-expensive than a nursing home. Medicare does not pay for assisted
-living. Medicaid may provide coverage for some aspects of assisted
-living, depending on the state and whether the person is eligible. This
-care option is partially covered by some long-term care insurance
-policies.</p>
-</div>
-<div id="section-summary" class="section level1">
-<h1>Summary</h1>
-<p>Bed capacity across Minnesota has been declining since 2005. Overall,
-bed capacity has declined 33% from 2005 to 2024. The most severe
-declines have occurred in rural counties - Cass (-93%), Grant (-65%),
-Swift (-69%), Pine (-65%), and Faribault (-63%). By region, the largest
-declines have occurred in Northwest (-43%), Southwest (-38%), Southeast
-(33%), Northeast (-31%), Seven County Metro (-30%) and Central
-(-25%).</p>
-<p>When looking at bed capacity as a per capita (age 65+) value, this
-has increased from having 20 people age 65+ per skilled nursing facility
-bed in 2005 to 49 people age 65+ per skilled nursing facility bed in
-Minnesota. The most severe per capita values are located in North
-Central Minnesota - Pine: 1,387 per bed, Cass: 271 per bed, Hubbarb: 114
-per bed, and Crow Wing with 103 per bed. A few of the suburbs also had
-higher per capita values - Anoka: 148 per bed, Carver: 104 per bed,
-Dakota: 89 per bed and Washington with 80 per bed.</p>
-<p>Interestingly, at a rural-urban basis, the more urban a county group
-was the higher the per capita of 65+ per bed capacity was - Entirely
-urban was 60 people per bed and it shrinks to 23 people per bed for our
-entirely rural county group.</p>
-<p>Although it would seem that rural areas might be better off in terms
-of bed availability, one large concern is the amount of beds that are
-missing due to facility closures rather than currently operating
-facilities that have chosen to shrink their bed capacity. A higher
-percentage of facility closures tracks with how rural a county is -
-entirely rural counties have lost 26% of their facilities, town/rural
-mix counties have lost 21%, urban/town/rural county mix has lost 16%
-while entirely urban counties have lost only 9%.</p>
-<p>What this means for rural areas is that there is possibly less
-flexibility in expanding bed availability if demand increases. For our
-entirely rural counties, 58% of the decline in bed capacity is from
-facility closure. This is an economy of scale issue.</p>
-</div>
 
 
 
+</div>
+</div>
 
 </div>
 
@@ -449,6 +396,35 @@ $(document).ready(function () {
 
 <!-- code folding -->
 
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3,h4",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#section-TOC").tocify(options).data("toc-tocify");
+});
+</script>
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>

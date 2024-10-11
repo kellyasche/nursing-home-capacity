@@ -12,8 +12,6 @@ navbar:
           href: snf.html
         - text: "Assisted living"
           href: al.html
-    - text: "Analysis"
-      icon: fa-gear
 
 
 output:

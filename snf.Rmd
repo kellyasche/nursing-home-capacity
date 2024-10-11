@@ -126,6 +126,41 @@ mn_counties <- st_read("/Users/kellyasche/Library/CloudStorage/GoogleDrive-kasch
 
 ```
 
+<br>
+
+# Summary
+
+<br>
+
+## Beds
+
+<br>
+
+**Total Beds**
+
+* Overall, Minnesota has lost a third of the total skilled nursing facility beds from 2005 to 2024. 
+* The regions that experienced the largest decline in skilled nusing facility beds are in Northwest and Southwest Minnesota with a reduction of 43% and 38%. The lowest percentage is actually in Central Minnesota while the twin cities was 30.2% reduction.
+* The EDR's with a larger reduction in SNF beds than the state as a whole are;
+  * Northwest: EDR 4 and EDR 5
+  * Central: EDR 7E
+  * Southwest: EDR 8 and EDR 9
+* Our entirely rural counties has lost 41.7% of their SNF beds, while it improves incrementally until entirely urban with a 28.9% reduction.
+* These reductions do represent trends in that there has been a continuous decline in available SNF beds across Minnesota.
+
+**Availability per 65+ resident**
+
+* In Minnesota, the number of 65+ individuals per SNF licensed bed grew from 20.5 residents per SNF bed to 48.5.
+* Surprinsingly, the largest number of 65+ individuals per SNF licensed bed was the seven county metro at 60. But this is driven by four counties - Anoka, Washington, Dakota, and Carver, which all have nearly, or just over 100 65+ per SNF bed. Southwest actually had the lowest number with 28 individuals 65+ per nursing home bed.
+* The EDRs with really high ratios include EDR 5 - North Central with 72 individuals 65+ per bed, EDR 7E and 7W with 61 and 65.
+* Counties in the central lakes region have extremely high ratios - Cass, Pine, Hubbard, and Crow Wing.
+* Surprisingly, our entirely rural counties have the lowest number of individuals 65+ per bed with 23, The highest is in our entirely urban counties.
+
+<br>
+
+
+
+
+
 
 # Data Prep
 
@@ -432,6 +467,45 @@ girafe(ggobj = nh.nf2.beds.ruca.plot, width_svg = 10, height_svg = 10) %>%
 
 ```
 
+### RUCA trends
+
+The chart below shows that these numbers do represent trends. The reduction has been constant and consistent.
+
+<br>
+
+```{r nh and nf2 beds ruca trends, echo = FALSE}
+nh.nf2.beds.ruca.trends <- nh.nf2.beds.master %>%
+  filter(!is.na(Dem_Desc)) %>%
+  group_by(year, Dem_Desc) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
+  ungroup() %>%
+  group_by(Dem_Desc) %>%
+  arrange(year) %>%
+  mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+nh.nf2.beds.ruca.trends.plot <- ggplot(data = nh.nf2.beds.ruca.trends, aes(year, nh.nf2.beds.pct.change, color = Dem_Desc)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(Dem_Desc, "\n", year,  "\nNursing home beds and Boarding Care Nursing Beds", "\n", year, "\nNumber of beds: ", comma(nh.nf2.beds), "\nChange since ", min(nh.nf2.beds.mn$year), ": ", percent(nh.nf2.beds.pct.change, accuracy = .1), sep = ""))) +
+  geom_label_repel(data = filter(nh.nf2.beds.ruca.trends, year == max(year)),aes(label = percent(nh.nf2.beds.pct.change, accuracy = .1)), color = "black", show.legend = FALSE) +
+  labs(x="", y = "", color="", title = "Percent change in the number of nursing home beds (nursing and\nboarding homes) since 2005")+
+  scale_y_continuous(labels=scales::percent)+
+  scale_color_manual(values = color.ruca,
+                    guide = guide_legend(ncol = 3)) +
+  theme_bar+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = nh.nf2.beds.ruca.trends.plot, width_svg = 10, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+
 
 <br>
 
@@ -460,7 +534,7 @@ nh.nf2.beds.age.65plus.county <- nh.nf2.beds.master %>%
   filter(!is.na(countyfp)) %>%
   group_by(year, countyfp, COUNTY_NAME) %>%
   summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
-  ungroup() %>%
+  ungroup() 
   group_by(countyfp, COUNTY_NAME) %>%
   arrange(year) %>%
   mutate(nh.nf2.beds.pct.change = (nh.nf2.beds - nh.nf2.beds[year == min(year)]) / nh.nf2.beds[year == min(year)]) %>%

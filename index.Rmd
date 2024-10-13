@@ -95,6 +95,25 @@ Interestingly, at a rural-urban basis, the more urban a county group was the hig
 
 Although it would seem that rural areas might be better off in terms of bed availability, one large concern is the amount of beds that are missing due to facility closures rather than currently operating facilities that have chosen to shrink their bed capacity. A higher percentage of facility closures tracks with how rural a county is - entirely rural counties have lost 26% of their facilities, town/rural mix counties have lost 21%, urban/town/rural county mix has lost 16% while entirely urban counties have lost only 9%.
 
-What this means for rural areas is that there is possibly less flexibility in expanding bed availability if demand increases. For our entirely rural counties, 58% of the decline in bed capacity is from facility closure. This is an economy of scale issue.
+What this means for rural areas is that there is possibly less flexibility in expanding bed availability if demand increases. For our entirely rural counties, 58% of the decline in bed capacity is from facility closure. 
+
+We know that rural facilities are smaller in size. In 2024, the average facility size was 45 beds compared to 59 for town/rural mix counties, 66 for urban/town/rural mix and 89 beds for entirely urban counties. Even more striking is the difference at the 75% quartile - entirely rural counties had 50 beds where as entirely urban had 105 beds. This shows that there are significantly larger facilities in our more urban areas. 
+
+This is concerning because we see that smaller facilities are significantly more likely to close. The table below shows the statistics and comparitively the facilities that have remained open since 2005 are significantly larger.
+
+<br>
+
+```{r facility size comparison closed vs open}
+header <- c("", "Closed", "Open")
+row.1 <- c("Q25", 33, 45 )
+row.2 <- c("Mean", 59, 72)
+row.3 <- c("Median", 48, 62)
+row.4 <- c("Q75", 61, 86)
+
+table <- tibble(Statistic = c("Q25", "Mean", "Median", "Q75"), "Closed" = c(33, 59, 48, 61), "Open" = c(45, 72, 62, 86))
+
+kable(table, format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
 
 

@@ -64,7 +64,8 @@ Profile of institutional and non-institutional settings for each region of Minne
   + Services offered
   + Staffing
   
-  
+<br>
+
 # Terminology
 
 *Board and care homes*
@@ -84,6 +85,7 @@ Assisted living residents usually live in their own apartments or rooms and shar
 
 Most people pay the full costs of assisted living themselves. This option tends to be more expensive than living independently but less expensive than a nursing home. Medicare does not pay for assisted living. Medicaid may provide coverage for some aspects of assisted living, depending on the state and whether the person is eligible. This care option is partially covered by some long-term care insurance policies.
 
+<br>
 
 # Summary
 

@@ -108,6 +108,7 @@ counties.regions <- read_csv("/Users/kellyasche/Library/CloudStorage/GoogleDrive
          planning.region = str_replace(planning.region, " Minnesota", ""),
          planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
          edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"),
+         Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
          mif = ifelse(is.na(mif), "TC", mif),
          mif = as.factor(mif),
          mif = fct_relevel(mif, "NW", "NE", "WC", "EC", "SW", "SE", "TC"))
@@ -129,3 +130,226 @@ mn_counties <- st_read("/Users/kellyasche/Library/CloudStorage/GoogleDrive-kasch
 
 <br>
 
+# Summary
+
+Text Here.
+
+<br>
+
+# Data Prep
+
+First, we will load the master file.
+
+```{r load master file}
+master.original <- read_csv("Data/Facilities/Master-provider-directory-2005-2024.csv") %>%
+  mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
+         planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
+         edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"))
+
+master.original %>%
+  names() %>%
+  kable()
+
+master.age.65plus.county <- read_csv("Data/Population/Age/Master-age-65plus-county.csv") %>%
+  mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
+         planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
+         edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"))
+
+master.age.projections.65plus.county <- read_csv("Data/Population/Age/Master-age-projections-65plus-county.csv") %>%
+  mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
+         planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
+         edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"))
+```
+
+There are `r comma(ncol(master.original))` columns in the dataset and `r comma(nrow(master.original))` rows. Each row is a facility tied to a specific year.
+
+The following table defines all of the columns.
+
+```{r varaiable definition table}
+field.outline <- read_excel("Data/Facilities/Field outline.xlsx") %>%
+  as_tibble()
+
+datatable(field.outline, class = "cell-border stripe", filter = "top", rownames = FALSE)
+
+```
+
+<br>
+
+With this exploration, the primary data we want are only the assisted living facilities and their capacity. The column that's going to indicate this are the "ALL_PROV" and "ALL_CAPACITY" columns. 
+
+Here is a list of all the facilities.
+
+<br>
+
+```{r assisted living fac}
+master.al.fac <- master.original %>%
+  filter(ALL_CAPACITY > 0) %>%
+  select(year, HFID, NAME, COUNTY_NAME, LIC_TYPE, ALL_CAPACITY, countyfp, Dem_Desc, edr, planning.region, `MIF Region`)
+
+datatable(master.al.fac, class = "cell-border stripe", filter = "top", rownames = FALSE,
+          options = list(columnDefs = list(list(className = "dt-center", targets = 1:10)))) 
+```
+
+<br>
+
+Unfortunately, they only started licensing these facilities in 2021. The law established regulatory standards governing the provision of housing and services in assisted living facilities and assisted living facilities with dementia care to help ensure the health, safety, well-being, and appropriate treatment of residents. 
+
+In 2024, there are `r comma(nrow(master.al.fac))` facilities in Minnesota.
+
+<br>
+
+# Capacity
+
+Since we only have one year of data, in this section we explore the differences in capacity across the state but no trends. To keep capacity relative, we will use a couple of difference ratios;
+
+* ages 65+ per bed available, and
+* ratio of skilled nursing home beds to assisted living beds.
+
+<br>
+
+## Age 65+ per bed{.tabset}
+
+<br>
+
+```{r 65plus per bed data prep, echo=FALSE}
+al.fac.county <- master.al.fac %>%
+  group_by(year, countyfp) %>%
+  summarize(ALL_CAPACITY = sum(ALL_CAPACITY)) %>%
+  ungroup() %>%
+  left_join(counties.regions, by = c("countyfp")) %>%
+  left_join(master.age.65plus.county[,c(1,2,3)], by = c("countyfp", "year"))
+```
+
+### Minnesota
+
+In Minnesota, there are 16.8 people age 65 or older per assisted living facility bed. 
+
+<br>
+
+```{r 65plus per bed mn}
+al.fac.county %>%
+  group_by(year) %>%
+  summarize(ALL_CAPACITY = sum(ALL_CAPACITY),
+            age.65plus = sum(age.65plus)) %>%
+  ungroup() %>%
+  mutate(age.65plus.per.bed = age.65plus / ALL_CAPACITY) 
+
+```
+
+<br>
+
+### Planning Region
+
+The seven county metro has significantly higher capacity than does other regions of Minnesota. The lowest capacity is Northwest MN where there are 23 people aged 65+ per assisted living bed. The remaining regions at 20 per bed except for Southeast where it is 18 per bed.
+
+<br>
+
+```{r 65plus per bed pr}
+al.65plus.bed.pr <- al.fac.county %>%
+  group_by(planning.region) %>%
+  summarize(ALL_CAPACITY = sum(ALL_CAPACITY),
+            age.65plus = sum(age.65plus)) %>%
+  ungroup() %>%
+  mutate(age.65plus.per.bed = age.65plus / ALL_CAPACITY,
+         data_id = seq(n()))
+
+al.65plus.bed.pr.plot <- ggplot(al.65plus.bed.pr, aes(planning.region, age.65plus.per.bed, fill = planning.region)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\nNumber of assisted living beds: ", comma(ALL_CAPACITY), "\nNumber of 65+: ", comma(ALL_CAPACITY), "\nAge 65+ per bed: ", comma(age.65plus.per.bed),  sep = ""))) +
+  geom_label(aes(label = comma(age.65plus.per.bed, accuracy = 1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of people age 65+ per assisted living bed")+
+  scale_y_continuous(labels=scales::comma)+
+  theme_bar+
+  scale_fill_manual(values = color.pr,
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = al.65plus.bed.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### EDR
+
+Again we can see significantly lower capacity in the most rural areas of Minnesota. The most rural regions in Northwest, Central and Southwest have significantly numbers of 65+ per bed. The highest is in EDR 6W where there are 28 people age 65+ per bed.
+
+<br>
+
+```{r 65plus per bed edr}
+al.65plus.bed.edr <- al.fac.county %>%
+  group_by(edr, planning.region) %>%
+  summarize(ALL_CAPACITY = sum(ALL_CAPACITY),
+            age.65plus = sum(age.65plus)) %>%
+  ungroup() %>%
+  mutate(age.65plus.per.bed = age.65plus / ALL_CAPACITY,
+         data_id = seq(n()),
+         edr = str_sub(edr, 1, 6),
+         edr = trimws(edr, which = "both"))
+
+al.65plus.bed.edr.plot <- ggplot(al.65plus.bed.edr, aes(edr, age.65plus.per.bed, fill = edr)) +
+  facet_wrap(~planning.region, ncol = 2, scales = "free_x") +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(edr, "\nNumber of assisted living beds: ", comma(ALL_CAPACITY), "\nNumber of 65+: ", comma(ALL_CAPACITY), "\nAge 65+ per bed: ", comma(age.65plus.per.bed),  sep = ""))) +
+  geom_label(aes(label = comma(age.65plus.per.bed, accuracy = 1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of people age 65+ per assisted living bed")+
+  scale_y_continuous(labels=scales::comma)+
+  theme_bar+
+  scale_fill_manual(values = color.edr,
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = al.65plus.bed.edr.plot, width_svg = 7, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### RUCA
+
+This chart really shows how the capacity changes depending on rurality. Our entirely rural counties have 33 age 65plus per bed, while town/rural mix has 22, urban/town/rural mix has 20, and entirely urban has 15.
+
+<br>
+
+```{r 65plus per bed ruca}
+al.65plus.bed.ruca <- al.fac.county %>%
+  group_by(Dem_Desc) %>%
+  summarize(ALL_CAPACITY = sum(ALL_CAPACITY),
+            age.65plus = sum(age.65plus)) %>%
+  ungroup() %>%
+  mutate(age.65plus.per.bed = age.65plus / ALL_CAPACITY,
+         data_id = seq(n()))
+
+al.65plus.bed.ruca.plot <- ggplot(al.65plus.bed.ruca, aes(Dem_Desc, age.65plus.per.bed, fill = Dem_Desc)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(Dem_Desc, "\nNumber of assisted living beds: ", comma(ALL_CAPACITY), "\nNumber of 65+: ", comma(ALL_CAPACITY), "\nAge 65+ per bed: ", comma(age.65plus.per.bed),  sep = ""))) +
+  geom_label(aes(label = comma(age.65plus.per.bed, accuracy = 1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Number of people age 65+ per assisted living bed")+
+  scale_y_continuous(labels=scales::comma)+
+  theme_bar+
+  scale_fill_manual(values = color.ruca,
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = al.65plus.bed.ruca.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### County
+
+<br>
+
+
+
+<br>

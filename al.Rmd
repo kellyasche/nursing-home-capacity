@@ -209,6 +209,10 @@ Since we only have one year of data, in this section we explore the differences 
 
 ## Age 65+ per bed{.tabset}
 
+The charts below show the number of people that are 65 or older per assisted living bed. Consistently, rural areas have some of the highest number of 65+ per bed. In Minnesota, there are 17 people age 65+ per bed, however, it's significantly higher in rural Minnesota. In our entirely rural counties, there are 33 people age 65+ per assisted living bed, compared to 22 in town/rural mix, 20 in urban/town/rural mix, and 15 in entirely urban counties.
+
+Counties along the borders and in the central lakes are particularly high.
+
 <br>
 
 ```{r 65plus per bed data prep, echo=FALSE}
@@ -348,8 +352,32 @@ girafe(ggobj = al.65plus.bed.ruca.plot, width_svg = 7, height_svg = 7) %>%
 
 ### County
 
+The map shows that rural areas have significantly higher population of 65+ per assisted living bed.
+
 <br>
 
+```{r 65plus per bed county}
+al.65plus.bed.county <- al.fac.county %>%
+  mutate(age.65plus.per.bed = age.65plus / ALL_CAPACITY,
+         age.65plus.per.bed.bins = cut(age.65plus.per.bed,
+                                       breaks = c(0, 10, 20, 30, 40, 1000),
+                                       labels = c("9 to 10", "10 to 20", "20 to 30", "30 to 40", "40+"))) %>%
+  right_join(mn_counties[,c(5,7)], by = "countyfp")
 
+names(al.65plus.bed.county)
+
+al.65plus.bed.county.plot <- ggplot(al.65plus.bed.county) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = age.65plus.per.bed.bins, data_id = countyfp, tooltip = paste(Name, "\nYear: ", year, "\nPopulation age 65+: ", comma(age.65plus), "\nNumber of assisted living beds: ", comma(ALL_CAPACITY), "\nNumber age 65+ per bed: ", comma(age.65plus.per.bed), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = brewer.pal(n = 6, "PuBu")) +
+  labs(title = "Population 65+ per assisted living bed") +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = al.65plus.bed.county.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))     
+
+```
 
 <br>

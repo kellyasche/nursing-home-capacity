@@ -12,6 +12,8 @@ navbar:
           href: snf.html
         - text: "Assisted living"
           href: al.html
+        - text: "Home and Community Based Health Care"
+          href: hcbs.html
 
 
 output:

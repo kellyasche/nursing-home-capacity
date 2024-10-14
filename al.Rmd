@@ -132,7 +132,19 @@ mn_counties <- st_read("/Users/kellyasche/Library/CloudStorage/GoogleDrive-kasch
 
 # Summary
 
-Text Here.
+**Age 65+ per bed**
+
+By far the highest ratios of population 65 and older per assisted living capacity are located in rural areas. In our entirely rural counties it's 33 people age 65 or older per assisted living capacity compared to 22, 20 and 15 in town/rural mix, urban/town/rural mix and entirely urban counties, respectively.
+
+Counties on the west side of the state and in the central lakes region are particularly high.
+
+**Assisted living capacity as percentage of nursing home bed declines**
+
+To try and get a sense of the role assisted living might play in serving older populations we looked at the percentage this capacity makes up of all the declines in nursing home beds since 2005. 
+
+Again, there are stark differences across rural and urban. As a state, assisted living capacity makes up nearly 500% of the losses in nursing home beds, but this is largely due to significantly higher density of them in urban areas. Entirely urban counties have assisted living capacity that makes up for over 800% of the loss in nursing homes. In entirely rural counties, the assisted living capacity does not fully make up for all the losses in nursing home beds - 93%. 
+
+The percentages are particularly low in counties in the Northwest, Southwest, and Cass County.
 
 <br>
 
@@ -377,6 +389,215 @@ al.65plus.bed.county.plot <- ggplot(al.65plus.bed.county) +
 girafe(ggobj = al.65plus.bed.county.plot, width_svg = 7, height_svg = 7) %>%
   girafe_options(opts_selection(type = "none"),
                  opts_sizing(rescale = FALSE))     
+
+```
+
+<br>
+
+## Assisted living capacity as perentage of nursing home decline{.tabset}
+
+Let's see how much these beds make up for the loss in nursing home beds.
+
+The charts below is an attempt to tell the story of how much assisted living capacity can make up for the decline in nursing home beds. Even though that isn't an apples-to-apples comparison, it does at least provide an idea of the role that assisted living is attempting to fill.
+
+In Minnesota, assisted living makes up almost 500% of the decline in nursing home beds statewide. 
+
+At a regional level, the percentage varies significantly depending on rural-urbanness. The assisted living capacity in the seven county metro and Central planning regions make up a significantly higher percentage of their declines in nursing home beds - 795% and 622% respectively. However, it drops pretty significantly in the other regions. Northwest and Southwest in particular only have a bit over 200% of their decline in nursing home beds made up through assisted living.
+
+When grouping counties by rural-ness, entirely rural counties don't even have enough assisted living capacity to make up for the entire decline of nursing home beds - 93%. The county map shows that the lowest percentages are located in Northwest and Southwest Minnesota, as well as Cass County in North Central.
+
+<br>
+
+```{r prep al as pct of snf bed loss since 2005, echo=FALSE}
+master.snf <- master.original %>%
+  select(year, LIC_TYPE, NH_BEDS, SNF_BEDS, SNFNF_BEDS, NF1_BEDS, NF2_BEDS, HFID, NAME, CITY, STATE, ZIP, COUNTY_NAME, countyfp, Dem_Desc, edr, planning.region)
+
+nh.nf2.beds.master <- master.snf %>%
+  mutate(nh.nf2.beds = NH_BEDS + NF2_BEDS) %>%
+  filter(nh.nf2.beds > 0)
+
+snf.bed.change.al <- nh.nf2.beds.master %>%
+  filter(year %in% c(min(nh.nf2.beds.master$year), max(nh.nf2.beds.master$year))) %>%
+  group_by(year, countyfp) %>%
+  summarize(nh.nf2.beds = sum(nh.nf2.beds)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = year, values_from = nh.nf2.beds) %>%
+  mutate(snf.bed.change = `2005` - `2024`) %>%
+  rename(snf.bed.2005 = `2005`,
+         snf.bed.2024 = `2024`) %>%
+  left_join(al.fac.county, by = "countyfp") %>%
+  select(-year)
+
+```
+
+### Minnesota
+
+The assisted living capacity in Minnesota is nearly 500% of the decline in nursing home beds.
+
+<br>
+
+```{r al as percent of snf bed change mn, echo=FALSE}
+al.pct.snf.change.mn <- snf.bed.change.al %>%
+  summarize(snf.bed.2005 = sum(snf.bed.2005, na.rm = TRUE),
+            snf.bed.2024 = sum(snf.bed.2024, na.rm = TRUE),
+            ALL_CAPACITY = sum(ALL_CAPACITY, na.rm = TRUE)) %>%
+  mutate(bed.change = snf.bed.2024 - snf.bed.2005,
+         al.pct.snf.change = (ALL_CAPACITY / bed.change) * -1)
+
+kable(format = "html", al.pct.snf.change.mn, escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE) %>%
+  scroll_box(width = "100%", height = "300px")
+
+```
+
+<br>
+
+### Planning Region
+
+Assisted living units in more metropolitan areas make up a far larger percentage of the decline in nursing home beds. Assisted living facilities in the seven county metro have 800% more capacity than the decline in nursing home beds. In our rural areas, it averages 200% to 400%.
+
+<br>
+
+```{r al as percent of snf bed change pr, echo=FALSE}
+al.pct.snf.change.pr <- snf.bed.change.al %>%
+  filter(!is.na(planning.region)) %>%
+  group_by(planning.region) %>%
+  summarize(snf.bed.2005 = sum(snf.bed.2005, na.rm = TRUE),
+            snf.bed.2024 = sum(snf.bed.2024, na.rm = TRUE),
+            ALL_CAPACITY = sum(ALL_CAPACITY, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(bed.change = snf.bed.2024 - snf.bed.2005,
+         al.pct.snf.change = (ALL_CAPACITY / bed.change) * -1,
+         data_id = seq(n()))
+
+al.pct.snf.change.pr.plot <- ggplot(al.pct.snf.change.pr, aes(planning.region, al.pct.snf.change, fill = planning.region)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\nSNF beds in 2005: ", comma(snf.bed.2005), "\nSNF beds in 2024: ", comma(snf.bed.2024), "\nChange in SNF beds: ", comma(bed.change), "\nAssisted living capacity in 2024: ", comma(ALL_CAPACITY), "\nAssisted living capacity as percentage of SNF bed change: ", percent(al.pct.snf.change, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(al.pct.snf.change, accuracy = .1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Assisted living capacity as a percentage of\nnursing home bed declines")+
+  scale_y_continuous(labels=scales::percent)+
+  theme_bar+
+  scale_fill_manual(values = color.pr,
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+
+girafe(ggobj = al.pct.snf.change.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### EDR
+
+EDR 7W has an insane percentage of assisted living capacity to the decline in SNF beds at over 1100%. Other rural regions are significantly lower - they are around 100 to 350%.
+
+<br>
+
+```{r al as percent of snf bed change edr, echo=FALSE}
+al.pct.snf.change.edr <- snf.bed.change.al %>%
+  filter(!is.na(planning.region)) %>%
+  group_by(edr, planning.region) %>%
+  summarize(snf.bed.2005 = sum(snf.bed.2005, na.rm = TRUE),
+            snf.bed.2024 = sum(snf.bed.2024, na.rm = TRUE),
+            ALL_CAPACITY = sum(ALL_CAPACITY, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(bed.change = snf.bed.2024 - snf.bed.2005,
+         al.pct.snf.change = (ALL_CAPACITY / bed.change) * -1,
+         data_id = seq(n()),
+         edr = str_sub(edr, 1, 6))
+
+al.pct.snf.change.edr.plot <- ggplot(al.pct.snf.change.edr, aes(edr, al.pct.snf.change, fill = edr)) +
+  facet_wrap(~planning.region, ncol = 2, scales = "free_x") +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(edr, "\nSNF beds in 2005: ", comma(snf.bed.2005), "\nSNF beds in 2024: ", comma(snf.bed.2024), "\nChange in SNF beds: ", comma(bed.change), "\nAssisted living capacity in 2024: ", comma(ALL_CAPACITY), "\nAssisted living capacity as percentage of SNF bed change: ", percent(al.pct.snf.change, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(al.pct.snf.change, accuracy = .1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Assisted living capacity as a percentage of\nnursing home bed declines")+
+  scale_y_continuous(labels=scales::percent)+
+  theme_bar+
+  scale_fill_manual(values = color.edr,
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "none",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = al.pct.snf.change.edr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### RUCA
+
+This shows pretty clearly how stark the difference is in assisted living capacity making up the decline in nursing home beds. Enrirely rural counties have assisted living capacity that doesn't make up for the loss in nursing home beds. 
+
+<br>
+
+```{r al as percent of snf bed change ruca, echo=FALSE}
+al.pct.snf.change.ruca <- snf.bed.change.al %>%
+  filter(!is.na(planning.region)) %>%
+  group_by(Dem_Desc) %>%
+  summarize(snf.bed.2005 = sum(snf.bed.2005, na.rm = TRUE),
+            snf.bed.2024 = sum(snf.bed.2024, na.rm = TRUE),
+            ALL_CAPACITY = sum(ALL_CAPACITY, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(bed.change = snf.bed.2024 - snf.bed.2005,
+         al.pct.snf.change = (ALL_CAPACITY / bed.change) * -1,
+         data_id = seq(n()))
+
+al.pct.snf.change.ruca.plot <- ggplot(al.pct.snf.change.ruca, aes(Dem_Desc, al.pct.snf.change, fill = Dem_Desc)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(Dem_Desc, "\nSNF beds in 2005: ", comma(snf.bed.2005), "\nSNF beds in 2024: ", comma(snf.bed.2024), "\nChange in SNF beds: ", comma(bed.change), "\nAssisted living capacity in 2024: ", comma(ALL_CAPACITY), "\nAssisted living capacity as percentage of SNF bed change: ", percent(al.pct.snf.change, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(al.pct.snf.change, accuracy = .1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Assisted living capacity as a percentage of\nnursing home bed declines")+
+  scale_y_continuous(labels=scales::percent)+
+  theme_bar+
+  scale_fill_manual(values = color.ruca,
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+
+girafe(ggobj = al.pct.snf.change.ruca.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+### County
+
+The county map shows that some of the lowest percentage of assisted living capacity making up for nursing home declines are located in Northwest and Southwest Minnesota.
+
+<br>
+
+```{r al as percent of snf bed change county, echo=FALSE}
+al.pct.snf.change.county <- snf.bed.change.al %>%
+  filter(!is.na(planning.region)) %>%
+  filter(snf.bed.change > 0) %>%
+  mutate(al.pct.snf.change = ALL_CAPACITY / snf.bed.change,
+         al.pct.snf.change.bins = cut(al.pct.snf.change,
+                                      breaks = c(0, 1, 2, 3, 4, 100000),
+                                      labels = c("Less than 100%", "100% to 200%", "200% to 300%", "300% to 400%", "More than 400%"))) %>%
+  right_join(mn_counties[,c(5,7)], by = "countyfp")
+
+al.pct.snf.change.county.map <- ggplot(al.pct.snf.change.county) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = al.pct.snf.change.bins, data_id = countyfp, tooltip = paste(Name, "\nSNF beds in 2005: ", comma(snf.bed.2005), "\nSNF beds in 2024: ", comma(snf.bed.2024), "\nChange in SNF beds: ", comma(snf.bed.change), "\nAssisted living capacity in 2024: ", comma(ALL_CAPACITY), "\nAssisted living capacity as percentage of SNF bed change: ", percent(al.pct.snf.change, accuracy = .1), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = brewer.pal(n = 6, "PuBu")) +
+  labs(title = "Assisted living capacity as a percentage of\nnursing home bed declines") +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+
+girafe(ggobj = al.pct.snf.change.county.map, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
 
 ```
 

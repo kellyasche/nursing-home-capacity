@@ -126,4 +126,13 @@ kable(table, format = "html", escape = F) %>%
   kable_styling(bootstrap_options = "striped", full_width = FALSE)
 ```
 
+<br>
+
+## Home health care
+
+Using the QWEC data, there are serious concerns about rural's ability to meet the upcoming demands for elderly care. Admittedly, it's a bit difficult to interpret due to not knowing what locations are being served. It could be that a lot of the metro based home health care establishments are serving rural Minnesota. I sure hope so, because this doesn't look good.
+
+When look at establishments, the seven county metro has 75% of the total while the rest of Minnesota has bout 5% per planning region. This is about the same for employment.
+
+When looking at the population 65 and older per home health care establishment - the seven county metro has 869 individuals per home health care establishment while the other planning regions have 2,500+ per establishment. Employment mimics a similar pattern.
 

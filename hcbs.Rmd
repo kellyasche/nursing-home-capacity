@@ -161,6 +161,14 @@ master.65plus.2023.county <- read_csv("Data/Population/Age/Master-65plus-2023-co
 
 <br>
 
+# Summary
+
+I have some serious concerns about the state of home health care in rural Minnesota. It's a bit difficult to interpret due to not knowing what locations are being served. It could be that a lot of the metro based home health care establishments are serving rural Minnesota. I sure hope so, because htis doesn't look good.
+
+When look at establishments, the seven county metro has 75% of the total while the rest of Minnesota has bout 5% per planning region. This is about the same for employment.
+
+When looking at the population 65 and older per home health care establishment - the seven county metro has 869 individuals per home health care establishment while the other planning regions have 2,500+ per establishment. Employment mimics a similar pattern.
+
 # About the data
 
 The Quarterly Census of Employment and Wages is a census of employers on employment and wages. Data are available by industry, ownership type, states, regions, counties and minor civil divisions.

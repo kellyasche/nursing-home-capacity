@@ -152,6 +152,11 @@ master.hcbs.mn.qcew <- hcbs.qcew.mn.original %>%
   select(periodyear, naicstitle, areaname, empYear, avg_estabYear, totwageYear, avgwkwageYear) %>%
   rename(year = periodyear,
          planning.region = areaname)
+
+master.65plus.2023.county <- read_csv("Data/Population/Age/Master-65plus-2023-county.csv") %>%
+  mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
+         planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"))
+
 ```
 
 <br>
@@ -276,12 +281,226 @@ girafe(ggobj = estab.index.pr.plot, width_svg = 7, height_svg = 7) %>%
 
 Although Minnesota has experienced 200% growth in the industry since 2006, the index charts above indicate that the growth has been uneven. So let's look at the share of establishments by planning region.
 
+The chart below shows that 76% of the home health care establishments are headquartered in the Seven County metro.
+
 <br>
 
 ```{r estab share pr, echo=FALSE}
-estab.share.pr <- master.hcbs.pr.qcew %>%
+emp.share.pr <- master.hcbs.pr.qcew %>%
   filter(year == max(year)) %>%
-  mutate(pct.share = avg_estabYear / sum(avg_estabYear))
+  mutate(pct.share = avg_estabYear / sum(avg_estabYear),
+         data_id = seq(n()))
+
+emp.share.pr.plot <- ggplot(emp.share.pr, aes(planning.region, pct.share, fill = planning.region)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nNumber of home health care establishments: ", comma(avg_estabYear), "\nPercent share of all home health care establishments: ", percent(pct.share, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(pct.share, accuracy = .1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Percent share of statewide home health care establishments")+
+  scale_y_continuous(labels=scales::percent)+
+  theme_bar+
+  scale_fill_manual(values = color.pr,
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+
+girafe(ggobj = emp.share.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+## 65+ per establishment
+
+Next let's take a look at the population that is 65 years or older per home health care establishment.
+
+The chart below shows that there are thousands more 65 or older individuals per establishment outside of the seven county metro.
+
+<br>
+
+```{r pop 65+ per estab}
+age.65plus.2023.pr <- master.65plus.2023.county %>%
+  group_by(planning.region) %>%
+  summarize(pop.65plus = sum(pop.65plus)) %>%
+  ungroup()
+
+age.65plus.per.estab.pr <- age.65plus.2023.pr %>%
+  left_join(emp.share.pr, by = c("planning.region")) %>%
+  mutate(pop.65plus.per.estab = pop.65plus / avg_estabYear,
+         data_id = seq(n()))
+
+age.65plus.per.estab.pr.plot <- ggplot(age.65plus.per.estab.pr, aes(planning.region, pop.65plus.per.estab, fill = planning.region)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: 2023", "\nNumber of home health care establishments: ", comma(avg_estabYear), "\nPercent share of all home health care establishments: ", percent(pct.share, accuracy = .1), "\nPopulation 65 or older: ", comma(pop.65plus), "\nPop 65+ per home health care establishment: ", comma(pop.65plus.per.estab), sep = ""))) +
+  geom_label(aes(label = comma(pop.65plus.per.estab, accuracy = 1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Population of 65+ per home health care establishment")+
+  scale_y_continuous(labels=scales::comma)+
+  theme_bar+
+  scale_fill_manual(values = color.pr,
+                    guide = guide_legend(ncol = 3)) +
+  theme(text = element_text(size = 18),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+
+girafe(ggobj = age.65plus.per.estab.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))  
+```
+
+<br>
+
+# Employment
+
+Now let's take a look at employment. Again, let's do the following three;
+
+1. Index
+2. Percent share across regions
+3. Number of 65+ per employee.
+
+<br>
+
+## Employment index{.tabset}
+
+### Minnesota
+
+There's been a growth of 89% in employment in home health care industry.
+
+<br>
+
+```{r employment MN, echo=FALSE}
+emp.index.mn <- master.hcbs.mn.qcew %>%
+  filter(year != max(year)) %>%
+  filter(year > 2005) %>%
+  mutate(empYear.index = (empYear - empYear[year == min(year)]) / empYear[year == min(year)],
+         data_id = seq(n()))
+
+emp.index.mn.plot <- ggplot(emp.index.mn, aes(year, empYear.index)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste("Minnesota", "\nYear: ", year, "\nNumber of home based health care employees: ", comma(empYear), "\nPercent change since ", min(emp.index.mn$year), ": ", percent(empYear.index, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Change in home based health care employment since 2005")+
+  geom_label_repel(data = filter(emp.index.mn, year == max(year)), aes(label = percent(empYear.index, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 2),
+                     guide = guide_axis(n.dodge = 2)) +
+  theme_line+
+  theme(text = element_text(size = 18))
+
+girafe(ggobj = emp.index.mn.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
 
 
 ```
+
+
+
+<br>
+
+## Planning Region
+
+I have serious concerns about the state of the home health care industry in rural Minnesota.
+
+<br>
+
+```{r employment pr, echo=FALSE}
+emp.index.pr <- master.hcbs.pr.qcew %>%
+  filter(year != max(year)) %>%
+  filter(year > 2005) %>%
+  group_by(planning.region) %>%
+  mutate(empYear.index = (empYear - empYear[year == min(year)]) / empYear[year == min(year)]) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+emp.index.pr.plot <- ggplot(emp.index.pr, aes(year, empYear.index, color = planning.region)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nNumber of home based health care employment: ", comma(empYear), "\nPercent change since ", min(estab.index.mn$year), ": ", percent(empYear.index, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Change in home based health care employment since 2005")+
+  geom_label_repel(data = filter(emp.index.pr, year == max(year)), aes(label = percent(empYear.index, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 2),
+                     guide = guide_axis(n.dodge = 2)) +
+  scale_color_manual(values = color.pr) +
+  theme_line+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = emp.index.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+
+```
+
+<br>
+
+## Share of employment by planning region
+
+Three-quarters of the employment in home health care is located in the seven county metro.
+
+<br>
+
+```{r employment share pr, echo=FALSE}
+emp.share.pr <- master.hcbs.pr.qcew %>%
+  filter(year == max(year)) %>%
+  mutate(pct.share = empYear / sum(empYear),
+         data_id = seq(n()))
+
+emp.share.pr.plot <- ggplot(emp.share.pr, aes(planning.region, pct.share, fill = planning.region)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nNumber of home health care employment: ", comma(empYear), "\nPercent share of all home health care emplotment: ", percent(pct.share, accuracy = .1), sep = ""))) +
+  geom_label(aes(label = percent(pct.share, accuracy = .1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Percent share of statewide home health care employment")+
+  scale_y_continuous(labels=scales::percent)+
+  theme_bar+
+  scale_fill_manual(values = color.pr,
+                    guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+
+girafe(ggobj = emp.share.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+```
+
+<br>
+
+## 65+ per employment
+
+The charts below show that there are 27 people age 65+ per employee in the home health care industry. It's over 100 in rural regions.
+
+<br>
+
+```{r pop 65+ per employment}
+age.65plus.per.emp.pr <- age.65plus.2023.pr %>%
+  left_join(emp.share.pr, by = c("planning.region")) %>%
+  mutate(pop.65plus.per.emp = pop.65plus / empYear,
+         data_id = seq(n()))
+
+age.65plus.per.emp.pr.plot <- ggplot(age.65plus.per.emp.pr, aes(planning.region, pop.65plus.per.emp, fill = planning.region)) +
+  geom_col_interactive(position = "dodge", aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: 2023", "\nNumber of home health care employment: ", comma(empYear), "\nPercent share of all home health care employment: ", percent(pct.share, accuracy = .1), "\nPopulation 65 or older: ", comma(pop.65plus), "\nPop 65+ per home health care employment: ", comma(pop.65plus.per.emp), sep = ""))) +
+  geom_label(aes(label = comma(pop.65plus.per.emp, accuracy = 1)), show.legend = FALSE, color = "white", size = 5, position = position_dodge(width = .9)) +
+  labs(x="", y = "", color="", title = "Population of 65+ per home health care employment")+
+  scale_y_continuous(labels=scales::comma)+
+  theme_bar+
+  scale_fill_manual(values = color.pr,
+                    guide = guide_legend(ncol = 3)) +
+  theme(text = element_text(size = 18),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+
+girafe(ggobj = age.65plus.per.emp.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))  
+```
+
+<br>
+

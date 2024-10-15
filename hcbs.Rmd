@@ -129,15 +129,29 @@ mn_counties <- st_read("/Users/kellyasche/Library/CloudStorage/GoogleDrive-kasch
 ```
 
 ```{r master hcbs data}
-hcbs.qcew.original <- read_csv("Data/QCEW/QCEWResults.csv")
+hcbs.qcew.pr.original <- read_csv("Data/QCEW/QCEWResults.csv")
 
-master.hcbs.qcew <- hcbs.qcew.original %>%
+master.hcbs.pr.qcew <- hcbs.qcew.pr.original %>%
   select(periodyear, naicstitle, areaname, empYear, avg_estabYear, totwageYear, avgwkwageYear) %>%
   rename(year = periodyear,
          planning.region = areaname) %>%
   mutate(planning.region = str_replace(planning.region, " Minnesota", ""),
-         planning.region = str_replace(planning.region, ", MN", ""))
-  
+         planning.region = str_replace(planning.region, ", MN", ""),
+         planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
+         planning.region = trimws(planning.region, which = "both")) %>%
+  complete(planning.region, year) %>%
+  filter(year != max(year)) %>%
+  mutate(avg_estabYear = ifelse(is.na(avg_estabYear), 10, avg_estabYear),
+         empYear = ifelse(is.na(empYear), 376, empYear),
+         totwageYear = ifelse(is.na(totwageYear), 5712696, totwageYear),
+         avgwkwageYear = ifelse(is.na(avgwkwageYear), 292.18, avgwkwageYear))
+
+hcbs.qcew.mn.original <- read_csv("Data/QCEW/QCEWResultsmn.csv")
+
+master.hcbs.mn.qcew <- hcbs.qcew.mn.original %>%
+  select(periodyear, naicstitle, areaname, empYear, avg_estabYear, totwageYear, avgwkwageYear) %>%
+  rename(year = periodyear,
+         planning.region = areaname)
 ```
 
 <br>
@@ -165,15 +179,55 @@ Some examples of businesses that fall under the NAICS code 6216 include: Home he
 
 The NAICS code 62 is for the Health Care and Social Assistance sector, which includes businesses that provide health care and social assistance for individuals. 
 
-# Trends in establishments{.tabset}
+# Trends in establishments
 
-Below is....
+We will track this using a couple of different methods;
+
+1. Growth/index
+2. Share of establishments by location, and
+3. Establishments per 65+ population
 
 <br>
 
-## Minnesota
+## Establishment index{.tabset}
+
+The charts below show that even though Minnesota has experienced 200% growth in the number of home health care establishments since 2006, most of the growth has occurred in the seven county metro. 
+
+By 2023, the Seven County Mpls-St. Paul experienced growth of 230% in this industry, while Northeast had 25% growth. 
+
+### Minnesota
+
+There has been steady growth in the number of home health care businesses in Minnesota since 2005. 
 
 <br>
+
+```{r estab MN, echo=FALSE}
+estab.index.mn <- master.hcbs.mn.qcew %>%
+  filter(year != max(year)) %>%
+  filter(year > 2005) %>%
+  mutate(avg_estabYear.index = (avg_estabYear - avg_estabYear[year == min(year)]) / avg_estabYear[year == min(year)],
+         data_id = seq(n()))
+
+
+estab.index.mn.plot <- ggplot(estab.index.mn, aes(year, avg_estabYear.index)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste("Minnesota", "\nYear: ", year, "\nNumber of home based health care establishments: ", comma(avg_estabYear), "\nPercent change since ", min(estab.index.mn$year), ": ", percent(avg_estabYear.index, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Change in home based health care establishments since 2005")+
+  geom_label_repel(data = filter(estab.index.mn, year == max(year)), aes(label = percent(avg_estabYear.index, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 2),
+                     guide = guide_axis(n.dodge = 2)) +
+  theme_line+
+  theme(text = element_text(size = 18))
+
+girafe(ggobj = estab.index.mn.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+
+```
 
 
 
@@ -181,20 +235,53 @@ Below is....
 
 ## Planning Region
 
-<br>
+There are significant differences in the number of establishments.  
 
 <br>
 
-## EDR
+```{r estab pr, echo=FALSE}
+estab.index.pr <- master.hcbs.pr.qcew %>%
+  filter(year != max(year)) %>%
+  filter(year > 2005) %>%
+  group_by(planning.region) %>%
+  mutate(avg_estabYear.index = (avg_estabYear - avg_estabYear[year == min(year)]) / avg_estabYear[year == min(year)]) %>%
+  ungroup() %>%
+  mutate(data_id = seq(n()))
+
+estab.index.pr.plot <- ggplot(estab.index.pr, aes(year, avg_estabYear.index, color = planning.region)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nNumber of home based health care establishments: ", comma(avg_estabYear), "\nPercent change since ", min(estab.index.mn$year), ": ", percent(avg_estabYear.index, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Change in home based health care establishments since 2005")+
+  geom_label_repel(data = filter(estab.index.pr, year == max(year)), aes(label = percent(avg_estabYear.index, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 2),
+                     guide = guide_axis(n.dodge = 2)) +
+  scale_color_manual(values = color.pr) +
+  theme_line+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = estab.index.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+
+```
 
 <br>
 
-<br>
+## Share of establishments by planning region
 
-## RUCA
-
-<br>
+Although Minnesota has experienced 200% growth in the industry since 2006, the index charts above indicate that the growth has been uneven. So let's look at the share of establishments by planning region.
 
 <br>
 
-## County
+```{r estab share pr, echo=FALSE}
+estab.share.pr <- master.hcbs.pr.qcew %>%
+  filter(year == max(year)) %>%
+  mutate(pct.share = avg_estabYear / sum(avg_estabYear))
+
+
+```

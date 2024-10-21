@@ -10,6 +10,8 @@ navbar:
       menu:
         - text: "Skilled Nursing Facilities"
           href: snf.html
+        - text: "Demand and Supply for SNF"
+          href: snf_supply_demand.html
         - text: "Assisted living"
           href: al.html
         - text: "Home and Community Based Health Care"

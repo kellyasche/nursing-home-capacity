@@ -109,7 +109,8 @@ counties.regions <- read_csv("/Users/kellyasche/Library/CloudStorage/GoogleDrive
          edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"),
          mif = ifelse(is.na(mif), "TC", mif),
          mif = as.factor(mif),
-         mif = fct_relevel(mif, "NW", "NE", "WC", "EC", "SW", "SE", "TC"))
+         mif = fct_relevel(mif, "NW", "NE", "WC", "EC", "SW", "SE", "TC"),
+         Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"))
 
 
 color.ruca <- c("Entirely rural" = "#009933", "Town/rural mix" = "#99CC33", "Urban/town/rural mix" = "#CC9966", "Entirely urban" = "#654C29", "Minnesota" = "black")
@@ -145,4 +146,280 @@ master.snf
 # Summary
 
 <br>
+
+# Preparing age projections
+
+First we need to figure out our population projections by age group. Since the information I have in the percentage of elderly that utilize long term care facilities is from the [Profile of Older Americans](https://acl.gov/sites/default/files/Profile%20of%20OA/ACL_ProfileOlderAmericans2023_508.pdf#page=7), which states the following;
+
+> “In 2022, a relatively small number of people (1.3 million) 65 and older lived in nursing homes. However, the percentage of the population increased with age, ranging from 1% for people 65-74 and 3% for people 75-84 to 8% for people over 85.” - Profile of Older Americans
+
+So, let's put together the 2024 population and projections for those three age groups. I will also filter it so it only has the years 2024, 2030, 2035, 2040, 2045 and 2050.
+
+<br>
+
+```{r master age groups}
+age.group.original <- read_csv("Data/Population/Age/Master-age-group-projections-county.csv") %>%
+  mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
+         edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"),
+         planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"))
+
+master.age.group <- age.group.original %>%
+  filter(year %in% c(2024, 2030, 2035, 2040, 2045, 2050))
+
+datatable(master.age.group, class = "cell-border stripe", filter = "top", rownames = FALSE,
+          options = list(columnDefs = list(list(className = "dt-center", targets = 1:4)))) 
+
+```
+
+<br>
+
+The age group dataset has `r comma(nrow(master.age.group))` rows and `r comma(ncol(master.age.group))` columns.
+
+<br>
+
+# Demand{.tabset}
+
+Using the percentages provided by the Profile of Older Americans, we will create a new column that estimates demand for long-term care.
+
+<br>
+
+```{r demand ltc}
+ltc.demand.county <- master.age.group %>%
+  mutate(ltc.demand = ifelse(age.group == "65_74", pop * .01,
+                             ifelse(age.group == "75_84", pop * .03, pop * .08))) %>%
+  group_by(year, countyfp) %>%
+  summarize(pop.65plus = sum(pop),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  left_join(counties.regions, by = "countyfp")
+
+```
+
+<br>
+
+The following tabset provides a table of the projected demand for long term care among 65+ population for each region and rural-urban category.
+
+<br>
+
+## Minnesota
+
+The char
+
+<br>
+
+```{r ltc demand MN, echo=FALSE}
+ltc.demand.mn <- ltc.demand.county %>%
+  group_by(year) %>%
+  summarize(pop.65plus = sum(pop.65plus),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  mutate(ltc.demand.index = (ltc.demand - ltc.demand[year == min(year)]) / ltc.demand[year == min(year)]) %>%
+  mutate(data_id = seq(n()))
+
+datatable(ltc.demand.mn, class = "cell-border stripe", filter = "top", rownames = FALSE,
+          options = list(columnDefs = list(list(className = "dt-center", targets = 1:4)))) %>%
+  formatCurrency(2, "", digits = 0) %>%
+  formatRound(3, digits = 0) %>%
+  formatPercentage(4, digits = 1)
+
+
+ltc.demand.mn.plot <- ggplot(ltc.demand.mn, aes(year, ltc.demand.index)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste("Minnesota", "\nYear: ", year, "\nPopulation 65+: ", comma(pop.65plus), "\nEstimated demand for long term care: ", comma(ltc.demand), "\nChange in demand since ", min(year), ": ", percent(ltc.demand.index), sep = ""))) +
+  labs(x="", y = "", color="", title = "Change in long term care demand")+
+  geom_label_repel(data = filter(ltc.demand.mn, year == max(year)), aes(label = percent(ltc.demand.index, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 5)) +
+  theme_line+
+  scale_color_manual(values= brewer.pal(n = 6, "RdYlBu"),
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = ltc.demand.mn.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+## Planning Region
+
+Interestingly, the seven county metro and central are going to see that largest change. By 2050, the seven county metro will have had their long term care demand go up by 60%. 
+
+<br>
+
+```{r ltc demand pr, echo=FALSE}
+ltc.demand.pr <- ltc.demand.county %>%
+  group_by(year, planning.region) %>%
+  summarize(pop.65plus = sum(pop.65plus),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  group_by(planning.region) %>%
+  mutate(ltc.demand.index = (ltc.demand - ltc.demand[year == min(year)]) / ltc.demand[year == min(year)]) %>%
+  ungroup %>%
+  mutate(data_id = seq(n()))
+
+datatable(ltc.demand.pr, class = "cell-border stripe", filter = "top", rownames = FALSE,
+          options = list(columnDefs = list(list(className = "dt-center", targets = 1:4)))) %>%
+  formatCurrency(3, "", digits = 0) %>%
+  formatRound(4, digits = 0) %>%
+  formatPercentage(5, digits = 1)
+
+
+ltc.demand.pr.plot <- ggplot(ltc.demand.pr, aes(year, ltc.demand.index, color = planning.region)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nPopulation 65+: ", comma(pop.65plus), "\nEstimated demand for long term care: ", comma(ltc.demand), "\nChange in demand since ", min(year), ": ", percent(ltc.demand.index), sep = ""))) +
+  labs(x="", y = "", color="", title = "Change in long term care demand")+
+  geom_label_repel(data = filter(ltc.demand.pr, year == max(year)), aes(label = percent(ltc.demand.index, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 5)) +
+  theme_line+
+  scale_color_manual(values= color.pr,
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = ltc.demand.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+## EDR
+
+<br>
+
+```{r ltc demand edr, echo=FALSE}
+ltc.demand.edr <- ltc.demand.county %>%
+  group_by(year, edr, planning.region) %>%
+  summarize(pop.65plus = sum(pop.65plus),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  group_by(edr, planning.region) %>%
+  mutate(ltc.demand.index = (ltc.demand - ltc.demand[year == min(year)]) / ltc.demand[year == min(year)]) %>%
+  ungroup %>%
+  mutate(data_id = seq(n()),
+         edr = str_sub(edr, 1, 6),
+         edr = trimws(edr, which = "both"))
+
+datatable(ltc.demand.edr, class = "cell-border stripe", filter = "top", rownames = FALSE,
+          options = list(columnDefs = list(list(className = "dt-center", targets = 1:4)))) %>%
+  formatCurrency(4, "", digits = 0) %>%
+  formatRound(5, digits = 0) %>%
+  formatPercentage(6, digits = 1)
+
+
+ltc.demand.edr.plot <- ggplot(ltc.demand.edr, aes(year, ltc.demand.index, color = edr)) +
+  facet_wrap(~planning.region, ncol = 2, scales = "free_x") +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste(edr, "\nYear: ", year, "\nPopulation 65+: ", comma(pop.65plus), "\nEstimated demand for long term care: ", comma(ltc.demand), "\nChange in demand since ", min(year), ": ", percent(ltc.demand.index), sep = ""))) +
+  labs(x="", y = "", color="", title = "Change in long term care demand")+
+  geom_label_repel(data = filter(ltc.demand.edr, year == max(year)), aes(label = percent(ltc.demand.index, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 5)) +
+  theme_line+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = ltc.demand.edr.plot, width_svg = 7, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+## RUCA
+
+<br>
+
+```{r ltc demand ruca, echo=FALSE}
+ltc.demand.ruca <- ltc.demand.county %>%
+  group_by(year, Dem_Desc) %>%
+  summarize(pop.65plus = sum(pop.65plus),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  group_by(Dem_Desc) %>%
+  mutate(ltc.demand.index = (ltc.demand - ltc.demand[year == min(year)]) / ltc.demand[year == min(year)]) %>%
+  ungroup %>%
+  mutate(data_id = seq(n()))
+
+datatable(ltc.demand.ruca, class = "cell-border stripe", filter = "top", rownames = FALSE,
+          options = list(columnDefs = list(list(className = "dt-center", targets = 1:4)))) %>%
+  formatCurrency(3, "", digits = 0) %>%
+  formatRound(4, digits = 0) %>%
+  formatPercentage(5, digits = 1)
+
+
+ltc.demand.ruca.plot <- ggplot(ltc.demand.ruca, aes(year, ltc.demand.index, color = Dem_Desc)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste(Dem_Desc, "\nYear: ", year, "\nPopulation 65+: ", comma(pop.65plus), "\nEstimated demand for long term care: ", comma(ltc.demand), "\nChange in demand since ", min(year), ": ", percent(ltc.demand.index), sep = ""))) +
+  labs(x="", y = "", color="", title = "Change in long term care demand")+
+  geom_label_repel(data = filter(ltc.demand.ruca, year == max(year)), aes(label = percent(ltc.demand.index, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_color_manual(values = color.ruca) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2050, 5)) +
+  theme_line+
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = ltc.demand.ruca.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+## County
+
+<br>
+```{r ltc demand county, echo=FALSE}
+ltc.demand.county.new <- ltc.demand.county %>%
+  group_by(countyfp) %>%
+  mutate(ltc.demand.index = (ltc.demand - ltc.demand[year == min(year)]) / ltc.demand[year == min(year)]) %>%
+  ungroup() %>%
+  select(year, countyfp, Name, pop.65plus, ltc.demand, ltc.demand.index) %>%
+  mutate(data_id = seq(n())) %>%
+  left_join(mn_counties[,c(5,7)], by = "countyfp")
+
+
+datatable(ltc.demand.county.new, class = "cell-border stripe", filter = "top", rownames = FALSE,
+          options = list(columnDefs = list(list(className = "dt-center", targets = 1:4)))) %>%
+  formatCurrency(4, "", digits = 0) %>%
+  formatRound(5, digits = 0) %>%
+  formatPercentage(6, digits = 1)
+
+
+ltc.demand.county.new.plot <- ggplot(ltc.demand.county.new) +
+  facet_wrap(~year, ncol = 2) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = ltc.demand.index, data_id = data_id, tooltip = paste(Name, "\nYear: ", year, "\nPopulation 65+: ", comma(pop.65plus), "\nNumber needing long term care: ", comma(ltc.demand), "\nPercent change in long term care demand since ", min(year), ": ", percent(ltc.demand.index, accuracy = .1), sep = ""))) +
+  scale_fill_fermenter(palette = "PuBu", direction = 1,
+                       labels = scales::label_percent()) +
+  theme_sf+
+  theme(legend.position = "right",
+        text = element_text(size = 18))
+
+girafe(ggobj = ltc.demand.county.new.plot, width_svg = 7, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+
+<br>
+
 

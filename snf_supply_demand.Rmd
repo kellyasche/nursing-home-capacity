@@ -119,6 +119,8 @@ color.pr <- c("Northwest" = 	"#4565b4", "Northeast" = "grey", "Central" = "#fee0
 
 color.edr <- c("EDR 1 - Northwest" = "#b3cde3", "EDR 2 - Headwaters" = "#8c96c6", "EDR 3 - Arrowhead" = "#fe9929", "EDR 4 - West Central" = "#8856a7", "EDR 5 - North Central" = "#810f7c", "EDR 6E- Southwest Central" = "#e5f5f9", "EDR 6W- Upper Minnesota Valley" = "#bdc9e1", "EDR 7E- East Central" = "#99d8c9", "EDR 7W- Central" = "#2ca25f", "EDR 8 - Southwest" = "#74a9cf", "EDR 9 - South Central" = "#0570b0", "EDR 10 - Southeast" = "#d7301f", "EDR 11 - 7 County Twin Cities" = "#d8b365", "Minnesota" = "black")
 
+color.edr.simple <- c("EDR 1" = "#b3cde3", "EDR 2" = "#8c96c6", "EDR 3" = "#fe9929", "EDR 4" = "#8856a7", "EDR 5" = "#810f7c", "EDR 6E" = "#e5f5f9", "EDR 6W" = "#bdc9e1", "EDR 7E" = "#99d8c9", "EDR 7W" = "#2ca25f", "EDR 8" = "#74a9cf", "EDR 9" = "#0570b0", "EDR 10" = "#d7301f", "EDR 11" = "#d8b365", "Minnesota" = "black")
+
 color.pr.edr <- c ("Northwest" = "#4565b4","Northeast" = "#e0f3f8", "Central" = "#fee090", "Seven County Mpls-St Paul" = "#d73027", "Southwest" = "#91bfdb", "Southeast" = "#fc8d59", "Minnesota" = "black", "EDR 1 - Northwest" = "#b3cde3", "EDR 2 - Headwaters" = "#8c96c6", "EDR 3 - Arrowhead" = "#fe9929", "EDR 4 - West Central" = "#8856a7", "EDR 5 - North Central" = "#810f7c", "EDR 6E- Southwest Central" = "#e5f5f9", "EDR 6W- Upper Minnesota Valley" = "#bdc9e1", "EDR 7E- East Central" = "#99d8c9", "EDR 7W- Central" = "#2ca25f", "EDR 8 - Southwest" = "#74a9cf", "EDR 9 - South Central" = "#0570b0", "EDR 10 - Southeast" = "#d7301f", "EDR 11 - 7 County Twin Cities" = "#d8b365")
 
 mn_counties <- st_read("/Users/kellyasche/Library/CloudStorage/GoogleDrive-kasche@ruralmn.org/My Drive/Data Prep/R Projects/Shapefiles/County shapefiles/MNCounties_MNDOT.shp", quiet = TRUE) %>%
@@ -131,14 +133,17 @@ mn_counties <- st_read("/Users/kellyasche/Library/CloudStorage/GoogleDrive-kasch
 master.original <- read_csv("Data/Facilities/Master-provider-directory-2005-2024.csv") %>%
   mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
          planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"),
-         edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"))
+         edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"),
+         edr.simple = fct_relevel(edr.simple, "EDR 1", "EDR 2", "EDR 3", "EDR 4", "EDR 5", "EDR 6E", "EDR 6W", "EDR 7E", "EDR 7W", "EDR 8", "EDR 9", "EDR 10", "EDR 11"))
 ```
 
 ```{r create master snf beds}
 master.snf <- master.original %>%
-  select(year, LIC_TYPE, NH_BEDS, SNF_BEDS, SNFNF_BEDS, NF1_BEDS, NF2_BEDS, HFID, NAME, CITY, STATE, ZIP, COUNTY_NAME, countyfp, Dem_Desc, edr, planning.region)
+  select(year, LIC_TYPE, NH_BEDS, SNF_BEDS, SNFNF_BEDS, NF1_BEDS, NF2_BEDS, HFID, NAME, CITY, STATE, ZIP, COUNTY_NAME, countyfp, Dem_Desc, edr, planning.region) %>%
+  left_join(counties.regions[,c(1,8)], by = "countyfp")
 
-master.snf
+datatable(master.snf, class = "cell-border stripe", filter = "top", rownames = FALSE,
+          options = list(columnDefs = list(list(className = "dt-center", targets = 1:4)))) 
 ```
 
 <br>
@@ -159,15 +164,17 @@ So, let's put together the 2024 population and projections for those three age g
 
 ```{r master age groups}
 age.group.original <- read_csv("Data/Population/Age/Master-age-group-projections-county.csv") %>%
+  left_join(counties.regions[,c(1,8)], by = "countyfp") %>%
   mutate(Dem_Desc = fct_relevel(Dem_Desc, "Entirely rural", "Town/rural mix", "Urban/town/rural mix", "Entirely urban"),
          edr = fct_relevel(edr, "EDR 1 - Northwest", "EDR 2 - Headwaters", "EDR 3 - Arrowhead", "EDR 4 - West Central", "EDR 5 - North Central", "EDR 6E- Southwest Central", "EDR 6W- Upper Minnesota Valley", "EDR 7E- East Central", "EDR 7W- Central", "EDR 8 - Southwest", "EDR 9 - South Central", "EDR 10 - Southeast", "EDR 11 - 7 County Twin Cities", "Minnesota"),
+         edr.simple = fct_relevel(edr.simple, "EDR 1", "EDR 2", "EDR 3", "EDR 4", "EDR 5", "EDR 6E", "EDR 6W", "EDR 7E", "EDR 7W", "EDR 8", "EDR 9", "EDR 10", "EDR 11"),
          planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"))
 
 master.age.group <- age.group.original %>%
   filter(year %in% c(2024, 2030, 2035, 2040, 2045, 2050))
 
 datatable(master.age.group, class = "cell-border stripe", filter = "top", rownames = FALSE,
-          options = list(columnDefs = list(list(className = "dt-center", targets = 1:4)))) 
+          options = list(columnDefs = list(list(className = "dt-center", targets = 1:ncol(master.age.group))))) 
 
 ```
 
@@ -187,12 +194,10 @@ Using the percentages provided by the Profile of Older Americans, we will create
 ltc.demand.county <- master.age.group %>%
   mutate(ltc.demand = ifelse(age.group == "65_74", pop * .01,
                              ifelse(age.group == "75_84", pop * .03, pop * .08))) %>%
-  group_by(year, countyfp) %>%
+  group_by(year, countyfp, Name, planning.region, edr, edr.simple, Dem_Desc) %>%
   summarize(pop.65plus = sum(pop),
             ltc.demand = sum(ltc.demand)) %>%
-  ungroup() %>%
-  left_join(counties.regions, by = "countyfp")
-
+  ungroup() 
 ```
 
 <br>
@@ -203,7 +208,7 @@ The following tabset provides a table of the projected demand for long term care
 
 ## Minnesota
 
-The char
+Demand for long-term care in Minnesota will increase by 45% by 2050. The largest growth will occur between 2025 and 2035 and then it begins to plateau.
 
 <br>
 
@@ -248,7 +253,7 @@ girafe(ggobj = ltc.demand.mn.plot, width_svg = 7, height_svg = 7) %>%
 
 ## Planning Region
 
-Interestingly, the seven county metro and central are going to see that largest change. By 2050, the seven county metro will have had their long term care demand go up by 60%. 
+The chart below shows that the largest growth in demand will occur in the seven county metro, particularly in the later years. However, by 2030 demand will be somewhat similar across all planning regions. After 2030, rural Minnesota begins to level off a bit, especially in Southwest and Northeast Minnesota.
 
 <br>
 
@@ -295,20 +300,20 @@ girafe(ggobj = ltc.demand.pr.plot, width_svg = 7, height_svg = 7) %>%
 
 ## EDR
 
+The EDRs have a lot of variation in long term care demand. Although the seven county metro still has the highest demand, it's closed followed by EDR 5 and EDR 7W. 
+
 <br>
 
 ```{r ltc demand edr, echo=FALSE}
 ltc.demand.edr <- ltc.demand.county %>%
-  group_by(year, edr, planning.region) %>%
+  group_by(year, edr.simple, planning.region) %>%
   summarize(pop.65plus = sum(pop.65plus),
             ltc.demand = sum(ltc.demand)) %>%
   ungroup() %>%
-  group_by(edr, planning.region) %>%
+  group_by(edr.simple, planning.region) %>%
   mutate(ltc.demand.index = (ltc.demand - ltc.demand[year == min(year)]) / ltc.demand[year == min(year)]) %>%
   ungroup %>%
-  mutate(data_id = seq(n()),
-         edr = str_sub(edr, 1, 6),
-         edr = trimws(edr, which = "both"))
+  mutate(data_id = seq(n()))
 
 datatable(ltc.demand.edr, class = "cell-border stripe", filter = "top", rownames = FALSE,
           options = list(columnDefs = list(list(className = "dt-center", targets = 1:4)))) %>%
@@ -317,15 +322,16 @@ datatable(ltc.demand.edr, class = "cell-border stripe", filter = "top", rownames
   formatPercentage(6, digits = 1)
 
 
-ltc.demand.edr.plot <- ggplot(ltc.demand.edr, aes(year, ltc.demand.index, color = edr)) +
+ltc.demand.edr.plot <- ggplot(ltc.demand.edr, aes(year, ltc.demand.index, color = edr.simple)) +
   facet_wrap(~planning.region, ncol = 2, scales = "free_x") +
   geom_hline(yintercept = 0, color = "black") +
   geom_line(size = 3) +
-  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste(edr, "\nYear: ", year, "\nPopulation 65+: ", comma(pop.65plus), "\nEstimated demand for long term care: ", comma(ltc.demand), "\nChange in demand since ", min(year), ": ", percent(ltc.demand.index), sep = ""))) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste(edr.simple, "\nYear: ", year, "\nPopulation 65+: ", comma(pop.65plus), "\nEstimated demand for long term care: ", comma(ltc.demand), "\nChange in demand since ", min(year), ": ", percent(ltc.demand.index), sep = ""))) +
   labs(x="", y = "", color="", title = "Change in long term care demand")+
   geom_label_repel(data = filter(ltc.demand.edr, year == max(year)), aes(label = percent(ltc.demand.index, accuracy = .1)), show.legend = FALSE, size = 5) +
   scale_y_continuous(labels=scales::percent)+
   scale_x_continuous(breaks = seq(1900, 2050, 5)) +
+  scale_color_manual(values = color.edr.simple) +
   theme_line+
   theme(legend.position = "bottom",
         text = element_text(size = 18))
@@ -340,6 +346,8 @@ girafe(ggobj = ltc.demand.edr.plot, width_svg = 7, height_svg = 10) %>%
 <br>
 
 ## RUCA
+
+Rural-urban categories also show significant variation. Our entirely rural areas will have peak demand in 2035 with a 6.25% increase from 2024. Town/rural mix and Urban/town/rural mix counties will peak in 2045 with an increase in demand of nearly 25%. Entirely urban counties will continue to peak until 2050 with an increase in demand of 60%!
 
 <br>
 
@@ -385,6 +393,8 @@ girafe(ggobj = ltc.demand.ruca.plot, width_svg = 7, height_svg = 7) %>%
 
 ## County
 
+The county map shows an interesting pattern. Along the western side of Minnesota, counties have already peaked in demand or will peak by 2030. The largest increases in demand occur in the seven county suburbs, and in the central lakes region. Cass and Crow Wing counties will peak in 2050 with a 50% to 75% increase in demand. The largest increase is in Carver County with an increase of 174%.
+
 <br>
 ```{r ltc demand county, echo=FALSE}
 ltc.demand.county.new <- ltc.demand.county %>%
@@ -421,5 +431,9 @@ girafe(ggobj = ltc.demand.county.new.plot, width_svg = 7, height_svg = 10) %>%
 
 
 <br>
+
+# {.unnumbered .unlisted .toc-ignore .tabset}
+
+It might be nice to see the differences in when demand will peak across the state and to what extent that demand will be increased.
 
 

@@ -170,8 +170,7 @@ age.group.original <- read_csv("Data/Population/Age/Master-age-group-projections
          edr.simple = fct_relevel(edr.simple, "EDR 1", "EDR 2", "EDR 3", "EDR 4", "EDR 5", "EDR 6E", "EDR 6W", "EDR 7E", "EDR 7W", "EDR 8", "EDR 9", "EDR 10", "EDR 11"),
          planning.region = fct_relevel(planning.region, "Northwest", "Northeast", "Central", "Seven County Mpls-St Paul", "Southwest", "Southeast"))
 
-master.age.group <- age.group.original %>%
-  filter(year %in% c(2024, 2030, 2035, 2040, 2045, 2050))
+master.age.group <- age.group.original 
 
 datatable(master.age.group, class = "cell-border stripe", filter = "top", rownames = FALSE,
           options = list(columnDefs = list(list(className = "dt-center", targets = 1:ncol(master.age.group))))) 
@@ -203,6 +202,8 @@ ltc.demand.county <- master.age.group %>%
 <br>
 
 The following tabset provides a table of the projected demand for long term care among 65+ population for each region and rural-urban category.
+
+What is shows is that demand for long-term care is already high in our most rural counties where it's about to peak, especially by 2035. In our more urban counties, it's going to peak significantly later - after 2050.
 
 <br>
 
@@ -398,6 +399,7 @@ The county map shows an interesting pattern. Along the western side of Minnesota
 <br>
 ```{r ltc demand county, echo=FALSE}
 ltc.demand.county.new <- ltc.demand.county %>%
+  filter(year %in% c(2030, 2035, 2040, 2045, 2050)) %>%
   group_by(countyfp) %>%
   mutate(ltc.demand.index = (ltc.demand - ltc.demand[year == min(year)]) / ltc.demand[year == min(year)]) %>%
   ungroup() %>%
@@ -436,4 +438,194 @@ girafe(ggobj = ltc.demand.county.new.plot, width_svg = 7, height_svg = 10) %>%
 
 It might be nice to see the differences in when demand will peak across the state and to what extent that demand will be increased.
 
+Not surprisingly, the numbers below clarify how significant the peak in long term care will differ across rural-urbanness. Our most rural counties will peak in the mid-2030s while the more urban counties peak around 2047 to 2055.
 
+<br>
+
+## Minnesota
+
+The peak long term care demand for all of Minnesota will be in 2047 with 37,336 people.
+
+<br>
+
+```{r peak mn, echo=FALSE}
+peak.ltc.demand.mn <- age.group.original %>%
+  mutate(ltc.demand = ifelse(age.group == "65_74", pop * .01,
+                             ifelse(age.group == "75_84", pop * .03, pop * .08))) %>%
+  group_by(year) %>%
+  summarize(pop.65plus = sum(pop),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  filter(ltc.demand == max(ltc.demand))
+  
+datatable(peak.ltc.demand.mn) %>%
+  formatCurrency(2:3, "", digits = 0) 
+```
+
+<br>
+
+## Planning Region
+
+The year each region will peak in demand for long term care varies significantly. Northeast will peak first in 2041 with 2,216 people. This is followed immediately by Southwest with 2,568 people. Northwest and and Southeast peak in the same year with 2047. Significantly later are Central and the Seven County Metro with a peak at 2055.
+
+<br>
+
+```{r peak pr, echo=FALSE}
+peak.ltc.demand.pr <- age.group.original %>%
+  mutate(ltc.demand = ifelse(age.group == "65_74", pop * .01,
+                             ifelse(age.group == "75_84", pop * .03, pop * .08))) %>%
+  group_by(year, planning.region) %>%
+  summarize(pop.65plus = sum(pop),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  group_by(planning.region) %>%
+  filter(ltc.demand == max(ltc.demand)) %>%
+  ungroup()
+  
+datatable(peak.ltc.demand.pr) %>%
+  formatCurrency(3:4, "", digits = 0) 
+```
+
+<br>
+
+## EDR
+
+Breaking this down by EDR really shows the variation across EDRs. It's important to highlight that our most rural EDR's peak first. EDR 1, 2, 8, 6W, and 3 all peak at or before 2041. Then there's a pretty wide gap until EDR 4 and 6E with 2047.
+
+One I can't really figure out is EDR 5 - North Central - that won't peak until 2055.
+
+<br>
+
+```{r peak edr, echo=FALSE}
+peak.ltc.demand.edr <- age.group.original %>%
+  mutate(ltc.demand = ifelse(age.group == "65_74", pop * .01,
+                             ifelse(age.group == "75_84", pop * .03, pop * .08))) %>%
+  group_by(year, edr) %>%
+  summarize(pop.65plus = sum(pop),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  group_by(edr) %>%
+  filter(ltc.demand == max(ltc.demand)) %>%
+  ungroup()
+  
+datatable(peak.ltc.demand.edr) %>%
+  formatCurrency(3:4, "", digits = 0) 
+```
+
+<br>
+
+## RUCA
+
+As expected, our most rural county group will peak significantly sooner than other counties. By 2037, the entirely rural county group will peak with their long term care demand with 689 people. From there, town/rural mix and urban/town/rural mix peak in 2047. Entirely urban counties peak in 2055.
+
+<br>
+
+```{r peak ruca, echo=FALSE}
+peak.ltc.demand.ruca <- age.group.original %>%
+  mutate(ltc.demand = ifelse(age.group == "65_74", pop * .01,
+                             ifelse(age.group == "75_84", pop * .03, pop * .08))) %>%
+  group_by(year, Dem_Desc) %>%
+  summarize(pop.65plus = sum(pop),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  group_by(Dem_Desc) %>%
+  filter(ltc.demand == max(ltc.demand)) %>%
+  ungroup()
+  
+datatable(peak.ltc.demand.ruca) %>%
+  formatCurrency(3:4, "", digits = 0) 
+
+```
+
+<br>
+
+## County
+
+The map below shows that the peak year for nursing home care will be before 2030 for many counties on the Northwest and Southwest regions of Minnesota. While around the seven county metro, along the I94 corridor and in Southeast Minnesota long term care will peak after 2040 and even 2045.
+
+<br>
+
+```{r peak county, echo=FALSE}
+peak.ltc.demand.county <- age.group.original %>%
+  mutate(ltc.demand = ifelse(age.group == "65_74", pop * .01,
+                             ifelse(age.group == "75_84", pop * .03, pop * .08))) %>%
+  group_by(year, countyfp, Name, Dem_Desc, edr, planning.region) %>%
+  summarize(pop.65plus = sum(pop),
+            ltc.demand = sum(ltc.demand)) %>%
+  ungroup() %>%
+  group_by(Name, countyfp, Dem_Desc, edr, planning.region) %>%
+  filter(ltc.demand == max(ltc.demand)) %>%
+  ungroup() %>%
+  mutate(year.bins = cut(year,
+                         breaks = c(0, 2030, 2035, 2040, 2045, 2060),
+                         labels = c("Before 2030", "2030 to 2035", "2035 to 2040", "2040 to 2045", "After 2045")),
+         data_id = seq(n())) %>%
+  left_join(mn_counties[,c(5,7)], by = "countyfp")
+
+datatable(peak.ltc.demand.county) %>%
+  formatCurrency(7:8, "", digits = 0) 
+
+peak.ltc.demand.county.plot <- ggplot(peak.ltc.demand.county) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = year.bins, data_id = countyfp, tooltip = paste(Name, "\nYear long term care will peak: ", year, "\nDemand: ", comma(ltc.demand), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = brewer.pal(n = 6, "PuBu")) +
+  labs(title = "Year that demand for nursing home care will peak") +
+  theme(legend.box.margin = margin(50, 0, 0, -100),
+        text = element_text(size = 18))
+
+girafe(ggobj = peak.ltc.demand.county.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
+```
+
+<br>
+
+# Demand vs. supply
+
+The next big issue is if there's a gap in demand vs supply in long term care. I'm going to assess this question via three scenarios;
+
+1. If capacity for nursing home holds steady.
+2. If declines continue at current pace.
+3. The difference if nursing homes can at least solve their shrinkage issues.
+
+<br>
+
+## Demand vs supply holding steady{.tabset}
+
+First, I need to put together the nursing home capacity for 2024. For capacity, we will use the sum of NH_BEDS and NF2_BEDS. 
+
+NH_BEDS = SNF_BEDS + SNFNF_BEDS + NF1_BEDS
+
+* SNF_BEDS = are only medicare eligible beds.
+* SNFNF_BEDS = are medicare and medicaid eligible beds.
+* NF1_BEDS = are only medicaid beds
+
+NF2_BEDS are Federal Medicaid nursing beds located in boarding care homes.
+
+<br>
+
+```{r snf capcacity, echo=FALSE}
+snf.cap <- master.original %>%
+  filter(year == max(year)) %>%
+  filter(HFID != 0) %>%
+  select(HFID, NAME, COUNTY_NAME, countyfp, NH_BEDS, NF2_BEDS) %>%
+  mutate(snf.cap = NH_BEDS + NF2_BEDS) %>%
+  rename(County = COUNTY_NAME) 
+```
+
+### Minnesota
+
+<br>
+
+```{r demand vs supply holding steady}
+supply.demand.steady.mn <- snf.cap %>%
+  summarize(snf.cap = sum(snf.cap)) %>%
+  cross_join(ltc.demand.mn) %>%
+  mutate(snf.gap.demand.diff = snf.cap - ltc.demand)
+
+names(supply.demand.steady.mn)
+```
+
+<br>

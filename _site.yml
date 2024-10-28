@@ -16,6 +16,8 @@ navbar:
           href: al.html
         - text: "Home and Community Based Health Care"
           href: hcbs.html
+        - text: "Employment"
+          href: employment.html
 
 
 output:

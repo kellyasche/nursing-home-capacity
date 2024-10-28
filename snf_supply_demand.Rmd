@@ -604,6 +604,8 @@ NH_BEDS = SNF_BEDS + SNFNF_BEDS + NF1_BEDS
 
 NF2_BEDS are Federal Medicaid nursing beds located in boarding care homes.
 
+The charts below show a consistent pattern - our most rural places in Minnesota will, typically, have enough skilled nursing facility beds to meet demand in this scenario while our more urban areas will have significant shortages to meet demand.
+
 <br>
 
 ```{r snf capcacity, echo=FALSE}
@@ -612,20 +614,357 @@ snf.cap <- master.original %>%
   filter(HFID != 0) %>%
   select(HFID, NAME, COUNTY_NAME, countyfp, NH_BEDS, NF2_BEDS) %>%
   mutate(snf.cap = NH_BEDS + NF2_BEDS) %>%
-  rename(County = COUNTY_NAME) 
+  rename(County = COUNTY_NAME) %>%
+  left_join(counties.regions, by = "countyfp") %>%
+  select(-Name)
+
 ```
 
 ### Minnesota
 
+There will be a consistently growing gap between the capacity of skilled nursing facility beds and demand for them.
+
 <br>
 
-```{r demand vs supply holding steady}
+```{r demand vs supply holding steady mn}
 supply.demand.steady.mn <- snf.cap %>%
   summarize(snf.cap = sum(snf.cap)) %>%
   cross_join(ltc.demand.mn) %>%
-  mutate(snf.gap.demand.diff = snf.cap - ltc.demand)
+  mutate(snf.supply.demand.diff = snf.cap - ltc.demand,
+         data_id = seq(n()))
 
-names(supply.demand.steady.mn)
+supply.demand.steady.mn.plot <- ggplot(supply.demand.steady.mn, aes(year, snf.supply.demand.diff)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste("Minnesota", "\nYear: ", year, "\nSNF supply: ", comma(snf.cap), "\nSNF demand: ", comma(ltc.demand), "\nGap in supply vs. demand: ", snf.supply.demand.diff, sep = ""))) +
+  labs(x="", y = "", color="", title = "Difference between the skilled nursing facility\ncapacity and demand.")+
+  geom_label_repel(data = filter(supply.demand.steady.mn, year == max(year)), aes(label = comma(snf.supply.demand.diff)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::comma)+
+  scale_x_continuous(breaks = seq(1900, 2055, 5)) +
+  theme_line+
+  scale_color_manual(values= brewer.pal(n = 6, "RdYlBu"),
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = supply.demand.steady.mn.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+### Planning Region
+
+Well, this is interesting. It looks like Northeast and Southwest have enough capacity to get through the baby boomer demand. The other regions will not have such luck.
+
+<br>
+
+```{r demand vs supply holding steady pr}
+supply.demand.steady.pr <- snf.cap %>%
+  filter(!is.na(planning.region)) %>%
+  group_by(planning.region) %>%
+  summarize(snf.cap = sum(snf.cap)) %>%
+  ungroup() %>%
+  right_join(ltc.demand.pr, by = "planning.region") %>%
+  mutate(snf.supply.demand.diff = snf.cap - ltc.demand,
+         gap.pct.supply = snf.supply.demand.diff / snf.cap,
+         data_id = seq(n()))
+
+supply.demand.steady.pr.plot <- ggplot(supply.demand.steady.pr, aes(year, snf.supply.demand.diff, color = planning.region)) +
+  facet_wrap(~planning.region, scales = "free_y", ncol = 2) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nSNF supply: ", comma(snf.cap), "\nSNF demand: ", comma(ltc.demand), "\nGap in supply vs. demand: ", snf.supply.demand.diff, sep = ""))) +
+  labs(x="", y = "", color="", title = "Difference between the skilled nursing facility\ncapacity and demand.")+
+  geom_label_repel(data = filter(supply.demand.steady.pr, year == max(year)), aes(label = comma(snf.supply.demand.diff)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::comma)+
+  scale_x_continuous(breaks = seq(1900, 2055, 5)) +
+  theme_line+
+  scale_color_manual(values= color.pr,
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+girafe(ggobj = supply.demand.steady.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+### EDR
+
+Quite a bit of variation here. 
+
+Northwest: EDR 5 is looking the worst with a significant under supply of skilled nursing facilities.
+
+Central: EDR 7E and 7W are looking to be under supplied.
+
+Southwest: EDR 9 will be under supplied.
+
+<br>
+
+```{r demand vs supply holding steady edr}
+supply.demand.steady.edr <- snf.cap %>%
+  filter(!is.na(edr)) %>%
+  group_by(edr) %>%
+  summarize(snf.cap = sum(snf.cap)) %>%
+  ungroup() %>%
+  mutate(edr.simple = str_sub(edr, 1, 6),
+         edr.simple = trimws(edr.simple, which = "both")) %>%
+  right_join(ltc.demand.edr, by = "edr.simple") %>%
+  mutate(snf.supply.demand.diff = snf.cap - ltc.demand,
+         gap.pct.supply = snf.supply.demand.diff / snf.cap,
+         data_id = seq(n()))
+
+supply.demand.steady.edr.plot <- ggplot(supply.demand.steady.edr, aes(year, snf.supply.demand.diff, color = edr.simple)) +
+  facet_wrap(~planning.region, scales = "free_y", ncol = 2) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste(edr.simple, "\nYear: ", year, "\nSNF supply: ", comma(snf.cap), "\nSNF demand: ", comma(ltc.demand), "\nGap in supply vs. demand: ", snf.supply.demand.diff, sep = ""))) +
+  labs(x="", y = "", color="", title = "Difference between the skilled nursing facility\ncapacity and demand.")+
+  geom_label_repel(data = filter(supply.demand.steady.edr, year == max(year)), aes(label = comma(snf.supply.demand.diff)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::comma)+
+  scale_x_continuous(breaks = seq(1900, 2055, 5)) +
+  theme_line+
+  scale_color_manual(values= color.edr.simple,
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+girafe(ggobj = supply.demand.steady.edr.plot, width_svg = 7, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+### RUCA
+
+As expected, our entirely rural counties look to be solid in terms of providing enough nursing home supply for projected demand. Other county groups won't be so lucky.
+
+<br>
+
+```{r demand vs supply holding steady ruca}
+supply.demand.steady.ruca <- snf.cap %>%
+  filter(!is.na(Dem_Desc)) %>%
+  group_by(Dem_Desc) %>%
+  summarize(snf.cap = sum(snf.cap)) %>%
+  ungroup() %>%
+  right_join(ltc.demand.ruca, by = "Dem_Desc") %>%
+  mutate(snf.supply.demand.diff = snf.cap - ltc.demand,
+         gap.pct.supply = snf.supply.demand.diff / snf.cap,
+         data_id = seq(n()))
+
+supply.demand.steady.ruca.plot <- ggplot(supply.demand.steady.ruca, aes(year, snf.supply.demand.diff, color = Dem_Desc)) +
+  facet_wrap(~Dem_Desc, scales = "free_y", ncol = 2) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste(Dem_Desc, "\nYear: ", year, "\nSNF supply: ", comma(snf.cap), "\nSNF demand: ", comma(ltc.demand), "\nGap in supply vs. demand: ", snf.supply.demand.diff, sep = ""))) +
+  labs(x="", y = "", color="", title = "Difference between the skilled nursing facility\ncapacity and demand.")+
+  geom_label_repel(data = filter(supply.demand.steady.ruca, year == max(year)), aes(label = comma(snf.supply.demand.diff)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::comma)+
+  scale_x_continuous(breaks = seq(1900, 2055, 5)) +
+  theme_line+
+  scale_color_manual(values= color.ruca,
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+girafe(ggobj = supply.demand.steady.ruca.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+## {.unnumbered .unlisted .toc-ignore .tabset}
+
+In order to find the severity of the shortages, let's use the gap between demand and supply as a percentage of total supply. This will tell us how much needs to be built on top of the current supply. If there's enough to meet demand, the percentages will be positive.
+
+<br>
+
+### Minnesota
+
+There will be a consistently growing gap between the capacity of skilled nursing facility beds and demand for them.
+
+<br>
+
+```{r demand vs supply holding steady pct mn}
+supply.demand.steady.mn <- snf.cap %>%
+  summarize(snf.cap = sum(snf.cap)) %>%
+  cross_join(ltc.demand.mn) %>%
+  mutate(snf.supply.demand.diff = snf.cap - ltc.demand,
+         gap.pct.supply = snf.supply.demand.diff / snf.cap,
+         data_id = seq(n()))
+
+supply.demand.steady.pct.mn.plot <- ggplot(supply.demand.steady.mn, aes(year, gap.pct.supply)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 5, aes(data_id = data_id, tooltip = paste("Minnesota", "\nYear: ", year, "\nSNF supply: ", comma(snf.cap), "\nSNF demand: ", comma(ltc.demand), "\nGap in supply vs. demand: ", snf.supply.demand.diff, "\nGap as percentage of total supply: ", percent(gap.pct.supply, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Supply vs. demand gap as a percent of total\nsupply")+
+  geom_label_repel(data = filter(supply.demand.steady.mn, year == max(year)), aes(label = percent(gap.pct.supply, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2055, 5)) +
+  theme_line+
+  scale_color_manual(values= brewer.pal(n = 6, "RdYlBu"),
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18))
+
+girafe(ggobj = supply.demand.steady.pct.mn.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+### Planning Region
+
+The seven county metro has the most severe shortage in this scenario, by a lot!
+
+<br>
+
+```{r demand vs supply holding steady pct pr}
+supply.demand.steady.pct.pr.plot <- ggplot(supply.demand.steady.pr, aes(year, gap.pct.supply, color = planning.region)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste(planning.region, "\nYear: ", year, "\nSNF supply: ", comma(snf.cap), "\nSNF demand: ", comma(ltc.demand), "\nGap in supply vs. demand: ", snf.supply.demand.diff, "\nGap as a percent of supply: ", percent(gap.pct.supply, accuracy = .1),sep = ""))) +
+  labs(x="", y = "", color="", title = "Supply vs. demand gap as a percent of total\nsupply")+
+  geom_label_repel(data = filter(supply.demand.steady.pr, year == max(year)), aes(label = percent(gap.pct.supply)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2055, 5)) +
+  theme_line+
+  scale_color_manual(values= color.pr,
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+girafe(ggobj = supply.demand.steady.pct.pr.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+### EDR
+
+Quite a bit of variation here. 
+
+EDR 5 is a bit of an anomaly. In order to meet demand it will have to more than double it's current number of skilled nursing facility beds. 
+
+EDR 7E abd 7W also need to build quite a bit more.
+
+<br>
+
+```{r demand vs supply holding steady pct edr}
+supply.demand.steady.pct.edr.plot <- ggplot(supply.demand.steady.edr, aes(year, gap.pct.supply, color = edr.simple)) +
+  facet_wrap(~planning.region, scales = "free_y", ncol = 2) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste(edr.simple, "\nYear: ", year, "\nSNF supply: ", comma(snf.cap), "\nSNF demand: ", comma(ltc.demand), "\nGap in supply vs. demand: ", snf.supply.demand.diff, "\nGap as percent of supply: ", percent(gap.pct.supply, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Supply vs. demand gap as a percent of total\nsupply")+
+  geom_label_repel(data = filter(supply.demand.steady.edr, year == max(year)), aes(label = percent(gap.pct.supply, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2055, 5)) +
+  theme_line+
+  scale_color_manual(values= color.edr.simple,
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+girafe(ggobj = supply.demand.steady.pct.edr.plot, width_svg = 7, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+### RUCA
+
+As expected, our entirely rural counties look to be solid in terms of providing enough nursing home supply for projected demand. Other county groups won't be so lucky.
+
+<br>
+
+```{r demand vs supply holding steady pct ruca}
+supply.demand.steady.pct.ruca.plot <- ggplot(supply.demand.steady.ruca, aes(year, gap.pct.supply, color = Dem_Desc)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_line(size = 3) +
+  geom_point_interactive(size = 2.5, aes(data_id = data_id, tooltip = paste(Dem_Desc, "\nYear: ", year, "\nSNF supply: ", comma(snf.cap), "\nSNF demand: ", comma(ltc.demand), "\nGap in supply vs. demand: ", snf.supply.demand.diff, "\nGap as a percent of total supply: ", percent(gap.pct.supply, accuracy = .1), sep = ""))) +
+  labs(x="", y = "", color="", title = "Supply vs. demand gap as a percent of total supply.")+
+  geom_label_repel(data = filter(supply.demand.steady.ruca, year == max(year)), aes(label = percent(gap.pct.supply, accuracy = .1)), show.legend = FALSE, size = 5) +
+  scale_y_continuous(labels=scales::percent)+
+  scale_x_continuous(breaks = seq(1900, 2055, 5)) +
+  theme_line+
+  scale_color_manual(values= color.ruca,
+                     guide = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom",
+        text = element_text(size = 18),
+        axis.text.x = element_text(angle = 25, hjust = .9))
+
+girafe(ggobj = supply.demand.steady.pct.ruca.plot, width_svg = 7, height_svg = 7) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_toolbar(saveaspng = FALSE),
+                 opts_sizing(rescale = FALSE))
+
+```
+
+<br>
+
+### County
+
+
+<br>
+
+```{r demand vs supply holding steady pct county}
+supply.demand.steady.county <- snf.cap %>%
+  group_by(countyfp, County) %>%
+  summarize(snf.cap = sum(snf.cap)) %>%
+  ungroup() %>%
+  right_join(ltc.demand.county, by = "countyfp") %>%
+  filter(year %in% c(2030, 2035, 2040, 2045, 2050)) %>%
+  mutate(snf.supply.demand.diff = snf.cap - ltc.demand,
+         gap.pct.supply = snf.supply.demand.diff / snf.cap,
+         data_id = seq(n()),
+         gap.pct.supply.bins = cut(gap.pct.supply,
+                                   breaks = c(-100, -2, -1, -.5, 0, 100),
+                                   labels = c("-200%+", "-200% to -100%", "-100% to -50%", "-50% to 0%", "More supply than demand"))) %>%
+  left_join(mn_counties[,c(5,7)], by= "countyfp")
+
+supply.demand.steady.county.map <- ggplot(supply.demand.steady.county) +
+  facet_wrap(~year, ncol = 2) +
+  geom_sf_interactive(color = "grey85", aes(geometry = geometry, fill = gap.pct.supply.bins, data_id = data_id, tooltip = paste(County, "\nYear: ", year, "\nDemand for nursing facility beds: ", comma(ltc.demand, accuracy = 1), "\nSupply of nursing facility beds: ", comma(snf.cap, accuracy = 1), "\nGap between supply vs. demand: ", comma(snf.supply.demand.diff, accuracy = 1), "\nGap as percent of supply: ", percent(gap.pct.supply, accuracy = .1), sep = ""))) +
+  theme_sf+
+  scale_fill_manual(values = rev(brewer.pal(n = 6, "YlOrRd"))) +
+  labs(title = "Supply vs. demand gap as a percent of total\nsupply") +
+  theme(text = element_text(size = 18),
+        legend.position = "bottom")
+
+girafe(ggobj = supply.demand.steady.county.map, width_svg = 7, height_svg = 10) %>%
+  girafe_options(opts_selection(type = "none"),
+                 opts_sizing(rescale = FALSE))      
+
+
 ```
 
 <br>
